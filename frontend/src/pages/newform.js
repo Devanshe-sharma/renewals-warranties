@@ -38,7 +38,7 @@ export default function NewForm({ onSave, onCancel }) {
 
   // ── Fetch categories ──────────────────────────────────
   useEffect(() => {
-    fetch("http://localhost:3003/api/categories")
+    fetch(`${process.env.REACT_APP_API_URL}/api/categories`)
       .then(r => r.json())
       .then(data => setCategories(
         data.map(c => ({
@@ -51,7 +51,7 @@ export default function NewForm({ onSave, onCancel }) {
 
   // ── Fetch employees ───────────────────────────────────
   useEffect(() => {
-    fetch("http://localhost:3003/api/employee")
+    fetch(`${process.env.REACT_APP_API_URL}/api/employee`)
       .then(r => r.json())
       .then(data => {
         console.log("Employees loaded:", data.length);
