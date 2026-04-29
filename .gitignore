@@ -14,7 +14,7 @@ yarn-debug.log*
 /coverage
 
 # production
-/build
+
 
 
 # misc
