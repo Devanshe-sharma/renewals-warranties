@@ -127,15 +127,26 @@ export default function NewForm({ onSave, onCancel }) {
     return Object.keys(e).length === 0;
   };
 
-  const handleSave = () => {
-    if (!validate()) return;
-    onSave({
-      ...form,
-      id: `RW-${String(Date.now()).slice(-4)}`,
-      endDate,
-      pastRenewals: [],
+  const handleSave = async () => {
+  if (!validate()) return;
+  try {
+    const res = await fetch(`${process.env.REACT_APP_API_URL}/api/renewals`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...form, endDate }),
     });
-  };
+    const data = await res.json();
+    if (data.success) {
+      alert(`✅ Renewal created — ID: ${data.data.item_id}`);
+      onSave(data.data);
+    } else {
+      alert(`❌ Error: ${data.message}`);
+    }
+  } catch (err) {
+    alert('❌ Failed to save. Check your connection.');
+    console.error(err);
+  }
+};
 
   // ── Styles ────────────────────────────────────────────
   const inp = (name, extra = {}) => ({
@@ -156,9 +167,9 @@ export default function NewForm({ onSave, onCancel }) {
   return (
     <div>
       <Navbar
-        title="New Renewal"
+        title="Create Renewal List"
         subtitle="Fill in the details to create a new renewal entry"
-        breadcrumb={[{ label: "Dashboard", onClick: onCancel }, { label: "New Renewal" }]}
+        breadcrumb={[{ label: "Dashboard", onClick: onCancel }, { label: "Create Renewal List" }]}
         actions={
           <>
             <button onClick={onCancel} style={cancelBtnStyle}>Cancel</button>
@@ -256,13 +267,13 @@ export default function NewForm({ onSave, onCancel }) {
         {/* ── Reminders ── */}
         <Section title="Reminders" emoji="🔔">
           <div style={grid3}>
-            <Field label="Start Date" error={errors.startDate} required>
+            <Field label="Service start Date" error={errors.startDate} required>
               <input type="date" value={form.startDate}
                 onChange={e => set("startDate", e.target.value)} style={inp("startDate")} />
             </Field>
             <Field label="End Date (auto-calculated)">
               <input value={endDate ? fmtDate(endDate) : ""} readOnly
-                style={readOnly({ color: "#059669" })} placeholder="Set start date & frequency" />
+                style={readOnly({ color: "#059669" })} placeholder="Set Service start date & frequency" />
             </Field>
             <Field label="Renewal Frequency" error={errors.frequency} required>
               <select value={form.frequency} onChange={e => set("frequency", e.target.value)} style={sel("frequency")}>

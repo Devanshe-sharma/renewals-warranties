@@ -110,7 +110,7 @@ export default function UpdateForm({ renewal, categories = [], onSave, onCancel 
     <div>
       {/* ── Navbar ── */}
       <Navbar
-        title="Update Renewal"
+        title="Edit Renewal"
         subtitle={`Editing: ${renewal.itemName}`}
         breadcrumb={[{ label: "Dashboard", onClick: onCancel }, { label: renewal.itemName }]}
         actions={
@@ -277,39 +277,7 @@ export default function UpdateForm({ renewal, categories = [], onSave, onCancel 
           )}
         </Section>
 
-        {/* ── Payment ── */}
-        <Section title="Payment Details" emoji="💳">
-          <div style={grid2}>
-            <Field label="Standard Renewal Cost">
-              <input type="number" min="0" step="0.01" value={form.cost} onChange={(e) => set("cost", e.target.value)} style={inp("")} />
-            </Field>
-            <Field label="Payment Transfer Mode" name="mode" error={errors.mode} required>
-              <select value={form.mode} onChange={(e) => set("mode", e.target.value)} style={sel("mode")}>
-                <option value="">Select mode</option>
-                {["Bank", "Credit Card", "Prepaid Card", "Auto Update"].map((m) => <option key={m} value={m}>{m}</option>)}
-              </select>
-            </Field>
-            <Field label="Currency" name="currency" error={errors.currency} required>
-              <select value={form.currency} onChange={(e) => set("currency", e.target.value)} style={sel("currency")}>
-                <option value="INR">INR</option>
-                <option value="USD">USD</option>
-              </select>
-            </Field>
-            <Field label="Holder" name="holder" error={errors.holder} required>
-              <select value={form.holder} onChange={(e) => set("holder", e.target.value)} style={sel("holder")}>
-                <option value="">Select holder</option>
-                <option value="admin">Admin</option>
-                <option value="accounts">Accounts</option>
-              </select>
-            </Field>
-            <Field label="Active">
-              <select value={form.active} onChange={(e) => set("active", e.target.value)} style={sel("")}>
-                <option value="Yes">Yes</option>
-                <option value="No">No</option>
-              </select>
-            </Field>
-          </div>
-        </Section>
+       
 
         {/* ── Additional ── */}
         <Section title="Additional Details" emoji="ℹ️">

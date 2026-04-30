@@ -4,8 +4,7 @@ const LIME    = "#ADE80A";
 const SIDEBAR = "#0F1923";
 
 const NAV_ITEMS = [
-  { id: "dashboard", icon: "▦", label: "Dashboard"  },
-  { id: "new",       icon: "+", label: "New Renewal" },
+  { id: "dashboard", icon: "▦", label: "Create Renewal List"  },
 ];
 
 export default function Sidebar({ activeNav, onNav }) {
