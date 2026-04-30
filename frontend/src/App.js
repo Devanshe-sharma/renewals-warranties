@@ -1,86 +1,84 @@
 import React, { useState } from "react";
-import Navbar from "./components/navbar";
 import Sidebar from "./components/sidebar";
 import Dashboard from "./pages/dashboard";
 import NewForm from "./pages/newform";
 import UpdateForm from "./pages/updateform";
+import RenewalEventsPage from "./pages/Renewaleventspage";
 import { useCategoriesStore } from "./pages/categories";
 import "./App.css";
 
+// ── View map ──────────────────────────────────────────────
+// "dashboard"    → Renewal List table      (sidebar: Renewal List)
+// "new"          → New Renewal form
+// "update"       → Renewal Events table    (sidebar: Update Renewal)
+// "record-event" → Record Renewal Event form
+
 export default function App() {
-  const [view,    setView]    = useState("dashboard");
-  const [renewals, setRenewals] = useState([]);
-  const [editing,  setEditing]  = useState(null);
-  const [toast,    setToast]    = useState(null);
+  const [view,  setView]  = useState("dashboard");
+  const [toast, setToast] = useState(null);
 
   const catStore = useCategoriesStore();
 
+  // ── Toast ─────────────────────────────────────────────
   const showToast = (msg, type = "success") => {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 3000);
   };
 
-  const handleNav = (id) => {
-    if (id === "new") {
-      setEditing(null);
-      setView("new");
-    } else {
-      setView("dashboard");
-    }
-  };
+  // ── Sidebar nav handler ───────────────────────────────
+  // "dashboard" → renewal list  |  "update" → events table
+  const handleNav = (id) => setView(id);
 
-  const handleEdit = (renewal) => {
-    setEditing(renewal);
-    setView("update");
-  };
+  // ── Active nav highlight ──────────────────────────────
+  const activeNav =
+    view === "dashboard" || view === "new"          ? "dashboard" :
+    view === "update"    || view === "record-event" ? "update"    :
+    "dashboard";
 
-  const handleCreate = (data) => {
-    setRenewals((prev) => [...prev, data]);
-    showToast(`"${data.itemName}" created!`);
-    setView("dashboard");
-  };
-
-  const handleUpdate = (data) => {
-    setRenewals((prev) => prev.map((r) => (r.id === data.id ? data : r)));
-    showToast(`"${data.itemName}" updated!`);
-    setEditing(null);
-    setView("dashboard");
-  };
-
-  const handleCancel = () => {
-    setEditing(null);
-    setView("dashboard");
-  };
-
-  const activeNav = view === "new" ? "new" : "dashboard";
-
+  // ── Page renderer ─────────────────────────────────────
   const renderPage = () => {
     switch (view) {
+
+      // ── Renewal List ──────────────────────────────────
       case "new":
         return (
           <NewForm
             categories={catStore.categories}
-            onSave={handleCreate}
-            onCancel={handleCancel}
+            onSave={(data) => {
+              showToast(`"${data.item_name}" created!`);
+              setView("dashboard");
+            }}
+            onCancel={() => setView("dashboard")}
           />
         );
+
+      // ── Update Renewal ────────────────────────────────
       case "update":
         return (
-          <UpdateForm
-            renewal={editing}
-            categories={catStore.categories}
-            onSave={handleUpdate}
-            onCancel={handleCancel}
+          <RenewalEventsPage
+            onRecord={() => setView("record-event")}
+            onBack={() => setView("update")}
           />
         );
+
+      case "record-event":
+        return (
+          <UpdateForm
+            onSave={(data) => {
+              showToast(`Event ${data.event_id} recorded!`);
+              setView("update");
+            }}
+            onCancel={() => setView("update")}
+          />
+        );
+
+      // ── Default: Renewal List dashboard ───────────────
       default:
         return (
           <Dashboard
-            renewals={renewals}
             categories={catStore.categories}
-            onNew={() => handleNav("new")}
-            onEdit={handleEdit}
-            onSelect={handleEdit}
+            onNew={() => setView("new")}
+            onNavigateUpdateForm={() => setView("update")}
           />
         );
     }
@@ -104,6 +102,7 @@ export default function App() {
           fontSize: 14, fontWeight: 600,
           boxShadow: "0 4px 20px rgba(0,0,0,0.18)",
           display: "flex", alignItems: "center", gap: 10,
+          animation: "toastIn 0.2s ease",
         }}>
           <span>{toast.type === "success" ? "✓" : "✗"}</span>
           {toast.msg}
@@ -119,6 +118,7 @@ export default function App() {
         ::-webkit-scrollbar { width: 5px; height: 5px; }
         ::-webkit-scrollbar-thumb { background: #D1D5DB; border-radius: 3px; }
         ::-webkit-scrollbar-track { background: transparent; }
+        @keyframes toastIn { from { transform: translateY(10px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
       `}</style>
     </div>
   );

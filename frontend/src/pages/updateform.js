@@ -1,374 +1,344 @@
 import React, { useState, useEffect } from "react";
 import Navbar from "../components/navbar";
-import Sidebar from "../components/sidebar";
 
-// ── Constants ─────────────────────────────────────────────
 const LIME = "#ADE80A";
 
 const FREQ_MONTHS = { Monthly: 1, Quarterly: 3, "Half Yearly": 6, Annually: 12 };
 
-const DEFAULT_REMIND = {
-  Annually:      { r1: 30, r2: 10, rf: 1 },
-  "Half Yearly": { r1: 30, r2: 10, rf: 1 },
-  Quarterly:     { r1: 10, r2:  5, rf: 1 },
-  Monthly:       { r1: 10, r2:  5, rf: 1 },
-};
-
-const MOCK_EMPLOYEES = [
-  { name: "Ranjeet Singh",  department: "Admin"      },
-  { name: "Priya Sharma",   department: "IT"         },
-  { name: "Amit Kumar",     department: "Finance"    },
-  { name: "Neha Gupta",     department: "HR"         },
-  { name: "Rohit Verma",    department: "Operations" },
-];
-
 // ── Date helpers ──────────────────────────────────────────
-const addDays   = (d, n) => { const r = new Date(d); r.setDate(r.getDate() + n); return r; };
 const addMonths = (d, n) => { const r = new Date(d); r.setMonth(r.getMonth() + n); return r; };
 const fmtISO    = (d)    => d ? new Date(d).toISOString().split("T")[0] : "";
-const fmtDate   = (d)    => d ? new Date(d).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "";
+const fmtDate   = (d)    => d ? new Date(d).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "—";
+
+const BLANK = {
+  // item selection
+  item_id: "", item_name: "", category: "", subcategory: "",
+  prev_start_date: "", prev_expiry_date: "",
+  // decision
+  renewal_required: "",
+  // new renewal
+  new_renewal_date: "", frequency: "", new_expiry_date: "",
+  // payment
+  renewal_amount: "", payment_mode: "", card_holder: "",
+  invoice_ref: "", renewed_by: "", next_due_date: "", proof_link: "",
+  // additional
+  user_person: "", user_department: "", remarks: "", email_sent: "No",
+};
 
 // ────────────────────────────────────────────────────────
-// UPDATE FORM
-// Props:
-//   renewal    {Object} – the existing renewal to edit (required)
-//   categories {Array}  – [{ id, name, subcategories:[{id,name}] }]
-//   onSave     {fn}     – called with the updated renewal object
-//   onCancel   {fn}
+// UPDATE FORM  (Record Renewal Event)
 // ────────────────────────────────────────────────────────
-export default function UpdateForm({ renewal, categories = [], onSave, onCancel }) {
-  // Pre-fill form from the existing renewal object
-  const [form,   setForm]   = useState({ ...renewal });
-  const [errors, setErrors] = useState({});
-  const [words,  setWords]  = useState(0);
+export default function UpdateForm({ onSave, onCancel }) {
+  const [form,      setForm]      = useState(BLANK);
+  const [errors,    setErrors]    = useState({});
+  const [items,     setItems]     = useState([]);   // dropdown: all active renewals
+  const [nextId,    setNextId]    = useState("");   // preview event_id
+  const [loading,   setLoading]   = useState(false);
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
-  // ── Derived ───────────────────────────────────────────
-  const selectedCategory = categories.find((c) => c.name === form.category);
-  const subcats = selectedCategory ? selectedCategory.subcategories : [];
-
-  const endDate = form.startDate && form.frequency
-    ? fmtISO(addMonths(new Date(form.startDate), FREQ_MONTHS[form.frequency] || 12))
-    : "";
-
-  const rDate = (days) => (endDate ? fmtISO(addDays(new Date(endDate), -days)) : "");
-
-  // ── Side effects ──────────────────────────────────────
+  // ── Fetch item list for dropdown ──────────────────────
   useEffect(() => {
-    setWords((form.description || "").trim().split(/\s+/).filter(Boolean).length);
-  }, [form.description]);
+    fetch(`${process.env.REACT_APP_API_URL}/api/renewals?active=true`)
+      .then((r) => r.json())
+      .then((res) => { if (res.success) setItems(res.data); })
+      .catch((err) => console.error("Items fetch error:", err));
 
-  // Changing category → reset subcategory (unless already matching)
-  const handleCategoryChange = (newCat) => {
-    const cat = categories.find((c) => c.name === newCat);
-    const subExists = cat?.subcategories.some((s) => s.name === form.subcategory);
-    setForm((f) => ({ ...f, category: newCat, subcategory: subExists ? f.subcategory : "" }));
+    fetch(`${process.env.REACT_APP_API_URL}/api/renewal-events/next-id`)
+      .then((r) => r.json())
+      .then((res) => { if (res.success) setNextId(res.event_id); })
+      .catch((err) => console.error("Next ID fetch error:", err));
+  }, []);
+
+  // ── Item selection → autofill from linked renewal ────
+  const handleItemSelect = (item_id) => {
+    const item = items.find((i) => i.item_id === item_id);
+    if (!item) {
+      setForm(BLANK);
+      return;
+    }
+
+    // Calculate previous expiry = start_date + frequency
+    const prevStart  = item.start_date ? new Date(item.start_date) : null;
+    const months     = FREQ_MONTHS[item.frequency] || 12;
+    const prevExpiry = prevStart ? addMonths(prevStart, months) : null;
+
+    setForm((f) => ({
+      ...f,
+      item_id:          item.item_id,
+      item_name:        item.item_name,
+      category:         item.category    || "",
+      subcategory:      item.subcategory || "",
+      prev_start_date:  prevStart  ? fmtISO(prevStart)  : "",
+      prev_expiry_date: prevExpiry ? fmtISO(prevExpiry) : "",
+      frequency:        item.frequency   || "",
+      renewed_by:       item.emp_name    || "",
+      user_person:      item.user_person     || "",
+      user_department:  item.user_department || "",
+      // reset decision fields
+      renewal_required: "", new_renewal_date: "", new_expiry_date: "",
+      renewal_amount: "", payment_mode: "", card_holder: "",
+      invoice_ref: "", next_due_date: "", proof_link: "",
+      remarks: "", email_sent: "No",
+    }));
+    setErrors({});
   };
+
+  // ── Auto-calculate new expiry ─────────────────────────
+  useEffect(() => {
+    if (form.new_renewal_date && form.frequency) {
+      const expiry = addMonths(new Date(form.new_renewal_date), FREQ_MONTHS[form.frequency] || 12);
+      set("new_expiry_date", fmtISO(expiry));
+    } else {
+      set("new_expiry_date", "");
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.new_renewal_date, form.frequency]);
+
+  // ── Clear conditional fields when renewal_required = No ──
+  useEffect(() => {
+    if (form.renewal_required === "No") {
+      setForm((f) => ({
+        ...f,
+        new_renewal_date: "", frequency: "", new_expiry_date: "",
+        renewal_amount: "", payment_mode: "", card_holder: "",
+        invoice_ref: "", renewed_by: "", next_due_date: "", proof_link: "",
+        remarks: "", email_sent: "No",
+      }));
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.renewal_required]);
 
   // ── Validation ────────────────────────────────────────
   const validate = () => {
     const e = {};
-    if (!form.itemName.trim()) e.itemName  = "Required";
-    if (!form.category)        e.category  = "Required";
-    if (!form.startDate)       e.startDate = "Required";
-    if (!form.frequency)       e.frequency = "Required";
-    if (!form.mode)            e.mode      = "Required";
-    if (!form.currency)        e.currency  = "Required";
-    if (!form.holder)          e.holder    = "Required";
-    if (words > 150)           e.description = "Max 150 words";
+    if (!form.item_id)          e.item_id          = "Required";
+    if (!form.renewal_required) e.renewal_required = "Required";
+    if (form.renewal_required === "Yes") {
+      if (!form.new_renewal_date) e.new_renewal_date = "Required";
+      if (!form.frequency)        e.frequency        = "Required";
+      if (!form.new_expiry_date)  e.new_expiry_date  = "Required";
+    }
     setErrors(e);
     return Object.keys(e).length === 0;
   };
 
-  const handleSave = () => {
+  // ── Submit ────────────────────────────────────────────
+  const handleSave = async () => {
     if (!validate()) return;
-    onSave({
-      ...form,
-      endDate, // recalculate from startDate + frequency
-    });
+    setLoading(true);
+    try {
+      const res = await fetch(`${process.env.REACT_APP_API_URL}/api/renewal-events`, {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify(form),
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert(`✅ Renewal event recorded — ID: ${data.data.event_id}`);
+        onSave(data.data);
+      } else {
+        alert(`❌ Error: ${data.message}`);
+      }
+    } catch (err) {
+      alert("❌ Failed to save. Check your connection.");
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // ── Style factories ───────────────────────────────────
+  // ── Style helpers ─────────────────────────────────────
   const inp = (name, extra = {}) => ({
     border: `1.5px solid ${errors[name] ? "#EF4444" : "#E5E7EB"}`,
-    borderRadius: 8, padding: "9px 13px",
-    fontSize: 14, color: "#111", outline: "none",
-    width: "100%", boxSizing: "border-box",
-    fontFamily: "inherit", ...extra,
+    borderRadius: 8, padding: "9px 13px", fontSize: 14,
+    color: "#111", outline: "none", width: "100%",
+    boxSizing: "border-box", fontFamily: "inherit", ...extra,
   });
 
   const sel = (name) => ({
-    ...inp(name),
-    cursor: "pointer", background: "#fff", appearance: "none",
+    ...inp(name), cursor: "pointer", background: "#fff", appearance: "none",
     backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236B7280' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E")`,
-    backgroundRepeat: "no-repeat", backgroundPosition: "right 10px center",
-    paddingRight: 36,
+    backgroundRepeat: "no-repeat", backgroundPosition: "right 10px center", paddingRight: 36,
   });
+
+  const readOnly = (extra = {}) => inp("", { background: "#F9FAFB", color: "#6B7280", ...extra });
+
+  const showRenewalFields = form.renewal_required === "Yes";
+  const isWarranty        = form.category === "Warranty";
 
   return (
     <div>
-      {/* ── Navbar ── */}
       <Navbar
-        title="Edit Renewal"
-        subtitle={`Editing: ${renewal.itemName}`}
-        breadcrumb={[{ label: "Dashboard", onClick: onCancel }, { label: renewal.itemName }]}
+        title="Record Renewal Event"
+        subtitle="Log a renewal event against an existing renewal item"
+        breadcrumb={[{ label: "Dashboard", onClick: onCancel }, { label: "Record Renewal Event" }]}
         actions={
-  <>
-    <button
-      onClick={onCancel}
-      style={{
-        padding: "8px 16px",
-        borderRadius: 8,
-        border: "1px solid #E5E7EB",
-        background: "#fff",
-        fontWeight: 600,
-        cursor: "pointer",
-      }}
-    >
-      Cancel
-    </button>
-
-    <button
-      onClick={handleSave}
-      style={{
-        padding: "8px 16px",
-        borderRadius: 8,
-        border: "none",
-        background: "#ADE80A",
-        fontWeight: 700,
-        cursor: "pointer",
-      }}
-    >
-      ✅ Create Renewal
-    </button>
-  </>
-}
+          <>
+            <button onClick={onCancel} style={cancelBtnStyle}>Cancel</button>
+            <button onClick={handleSave} disabled={loading} style={{ ...saveBtnStyle, opacity: loading ? 0.7 : 1 }}>
+              {loading ? "Saving…" : "✅ Record Event"}
+            </button>
+          </>
+        }
       />
 
       <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
 
-        {/* ── Renewal Details ── */}
-        <Section title="Renewal Details" emoji="📋">
+        {/* ── Section 1: Item Information ── */}
+        <Section title="Item Information" emoji="📋">
           <div style={grid2}>
-            {/* ID is read-only on edit */}
+            {/* Event ID preview */}
+            <Field label="Renewal Event ID (auto-generated)">
+              <input value={nextId || "Auto-generated"} readOnly style={readOnly()} />
+            </Field>
+
+            {/* Item Name dropdown */}
+            <Field label="Item Name" error={errors.item_id} required>
+              <select value={form.item_id} onChange={(e) => handleItemSelect(e.target.value)} style={sel("item_id")}>
+                <option value="">Choose item name</option>
+                {items.map((i) => (
+                  <option key={i.item_id} value={i.item_id}>{i.item_name}</option>
+                ))}
+              </select>
+            </Field>
+
+            {/* Auto-filled from selected item */}
             <Field label="Item ID">
-              <input value={renewal.id} readOnly style={inp("", { background: "#F9FAFB", color: "#9CA3AF" })} />
+              <input value={form.item_id} readOnly style={readOnly()} placeholder="Auto-filled" />
             </Field>
-            <Field label="Category" name="category" error={errors.category} required>
-              <select value={form.category} onChange={(e) => handleCategoryChange(e.target.value)} style={sel("category")}>
-                <option value="">Choose category</option>
-                {categories.map((c) => (
-                  <option key={c.id} value={c.name}>{c.name}</option>
-                ))}
+            <Field label="Category / Renewal Type">
+              <input value={form.category} readOnly style={readOnly()} placeholder="Auto-filled" />
+            </Field>
+            <Field label="Sub-Category">
+              <input value={form.subcategory} readOnly style={readOnly()} placeholder="Auto-filled" />
+            </Field>
+            <Field label="Previous Renewal Start Date">
+              <input value={form.prev_start_date ? fmtDate(form.prev_start_date) : ""} readOnly style={readOnly()} placeholder="Auto-filled" />
+            </Field>
+            <Field label="Previous Expiry Date (calculated)">
+              <input value={form.prev_expiry_date ? fmtDate(form.prev_expiry_date) : ""} readOnly style={readOnly({ color: "#B45309" })} placeholder="Auto-calculated" />
+            </Field>
+
+            {/* Renewal Required */}
+            <Field label="Renewal Required?" error={errors.renewal_required} required>
+              <select value={form.renewal_required} onChange={(e) => set("renewal_required", e.target.value)} style={sel("renewal_required")}>
+                <option value="">Select</option>
+                <option value="Yes">Yes</option>
+                <option value="No">No</option>
               </select>
             </Field>
           </div>
+        </Section>
 
-          {subcats.length > 0 && (
-            <div style={{ marginTop: 20 }}>
-              <Field label="Subcategory">
-                <select value={form.subcategory} onChange={(e) => set("subcategory", e.target.value)} style={sel("")}>
-                  <option value="">Choose subcategory</option>
-                  {subcats.map((s) => (
-                    <option key={s.id} value={s.name}>{s.name}</option>
-                  ))}
+        {/* ── Section 2: New Renewal Details (only if renewal_required = Yes) ── */}
+        {showRenewalFields && (
+          <Section title="New Renewal Details" emoji="🔄">
+            <div style={grid3}>
+              <Field label="New Renewal Date" error={errors.new_renewal_date} required>
+                <input type="date" value={form.new_renewal_date} onChange={(e) => set("new_renewal_date", e.target.value)} style={inp("new_renewal_date")} />
+              </Field>
+              <Field label="Renewal Frequency" error={errors.frequency} required>
+                <select value={form.frequency} onChange={(e) => set("frequency", e.target.value)} style={sel("frequency")}>
+                  <option value="">Select frequency</option>
+                  {Object.keys(FREQ_MONTHS).map((f) => <option key={f} value={f}>{f}</option>)}
                 </select>
               </Field>
-            </div>
-          )}
-
-          <div style={{ marginTop: 20 }}>
-            <Field label="Item Name" name="itemName" error={errors.itemName} required>
-              <input value={form.itemName} onChange={(e) => set("itemName", e.target.value)} style={inp("itemName")} />
-            </Field>
-          </div>
-
-          <div style={{ marginTop: 20 }}>
-            <Field label="Description" name="description" error={errors.description}>
-              <textarea
-                value={form.description}
-                onChange={(e) => set("description", e.target.value)}
-                style={{ ...inp("description"), resize: "vertical", minHeight: 80 }}
-                placeholder="Optional description (max 150 words)"
-              />
-              <div style={{ fontSize: 11, color: words > 150 ? "#EF4444" : "#9CA3AF", textAlign: "right", marginTop: 2 }}>
-                {words} / 150 words
-              </div>
-            </Field>
-          </div>
-
-          <div style={{ marginTop: 20 }}>
-            <Field label="Vendor / Authority">
-              <input value={form.vendor} onChange={(e) => set("vendor", e.target.value)} style={inp("")} />
-            </Field>
-          </div>
-        </Section>
-
-        {/* ── Renewer Details ── */}
-        <Section title="Renewer Details" emoji="👤">
-          <div style={grid2}>
-            <Field label="Responsible Person">
-              <select
-                value={form.responsible}
-                onChange={(e) => {
-                  const emp = MOCK_EMPLOYEES.find((em) => em.name === e.target.value);
-                  setForm((f) => ({ ...f, responsible: e.target.value, department: emp?.department || "" }));
-                }}
-                style={sel("")}
-              >
-                {MOCK_EMPLOYEES.map((em) => (
-                  <option key={em.name} value={em.name}>{em.name}</option>
-                ))}
-              </select>
-            </Field>
-            <Field label="Renewal Department">
-              <input value={form.department} readOnly style={inp("", { background: "#F9FAFB" })} />
-            </Field>
-            <Field label="Email (Owner)">
-              <input type="email" value={form.email} onChange={(e) => set("email", e.target.value)} style={inp("")} />
-            </Field>
-          </div>
-        </Section>
-
-        {/* ── Reminders ── */}
-        <Section title="Reminders" emoji="🔔">
-          <div style={grid3}>
-            <Field label="Start Date" name="startDate" error={errors.startDate} required>
-              <input type="date" value={form.startDate} onChange={(e) => set("startDate", e.target.value)} style={inp("startDate")} />
-            </Field>
-            <Field label="End Date (auto-calculated)">
-              <input value={endDate ? fmtDate(endDate) : ""} readOnly style={inp("", { background: "#F9FAFB", color: "#059669" })} />
-            </Field>
-            <Field label="Renewal Frequency" name="frequency" error={errors.frequency} required>
-              <select value={form.frequency} onChange={(e) => set("frequency", e.target.value)} style={sel("frequency")}>
-                <option value="">Select frequency</option>
-                {Object.keys(FREQ_MONTHS).map((f) => <option key={f} value={f}>{f}</option>)}
-              </select>
-            </Field>
-            <Field label="1st Reminder (days before)">
-              <input type="number" min="0" value={form.reminder1Days} onChange={(e) => set("reminder1Days", +e.target.value)} style={inp("")} />
-            </Field>
-            <Field label="2nd Reminder (days before)">
-              <input type="number" min="0" value={form.reminder2Days} onChange={(e) => set("reminder2Days", +e.target.value)} style={inp("")} />
-            </Field>
-            <Field label="Final Reminder (days before)">
-              <input type="number" min="0" value={form.reminderFinalDays} onChange={(e) => set("reminderFinalDays", +e.target.value)} style={inp("")} />
-            </Field>
-          </div>
-
-          {endDate && (
-            <div style={{ marginTop: 20, background: "#F0FDF4", border: "1px solid #BBF7D0", borderRadius: 10, padding: "16px 20px" }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: "#166534", marginBottom: 12 }}>📅 Reminder Preview</div>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 16 }}>
-                {[
-                  { label: "Renewal Date",                        date: endDate,                      color: "#059669" },
-                  { label: `1st (${form.reminder1Days}d before)`, date: rDate(form.reminder1Days),    color: "#374151" },
-                  { label: `2nd (${form.reminder2Days}d before)`, date: rDate(form.reminder2Days),    color: "#374151" },
-                  { label: `Final (${form.reminderFinalDays}d)`,  date: rDate(form.reminderFinalDays),color: "#374151" },
-                ].map(({ label, date, color }) => (
-                  <div key={label} style={{ textAlign: "center" }}>
-                    <div style={{ fontSize: 10, color: "#6B7280", marginBottom: 4, fontWeight: 600 }}>{label}</div>
-                    <div style={{ fontSize: 13, fontWeight: 700, color }}>{fmtDate(date)}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </Section>
-
-       
-
-        {/* ── Additional ── */}
-        <Section title="Additional Details" emoji="ℹ️">
-          <div style={grid2}>
-            <Field label="Remarks">
-              <input value={form.remarks} onChange={(e) => set("remarks", e.target.value)} style={inp("")} />
-            </Field>
-            <Field label="Website Link">
-              <input type="url" value={form.link} onChange={(e) => set("link", e.target.value)} style={inp("")} />
-            </Field>
-          </div>
-
-          {form.category === "Warranty" && (
-            <div style={{ ...grid2, marginTop: 20 }}>
-              <Field label="User (optional)">
-                <select
-                  value={form.userPerson}
-                  onChange={(e) => {
-                    const emp = MOCK_EMPLOYEES.find((em) => em.name === e.target.value);
-                    setForm((f) => ({ ...f, userPerson: e.target.value, userDepartment: emp?.department || "" }));
-                  }}
-                  style={sel("")}
-                >
-                  <option value="">Choose user</option>
-                  {MOCK_EMPLOYEES.map((em) => <option key={em.name} value={em.name}>{em.name}</option>)}
-                </select>
-              </Field>
-              <Field label="User Department (auto-filled)">
-                <input value={form.userDepartment} readOnly style={inp("", { background: "#F9FAFB" })} />
+              <Field label="Expiry Date (calculated)" error={errors.new_expiry_date}>
+                <input value={form.new_expiry_date ? fmtDate(form.new_expiry_date) : ""} readOnly style={readOnly({ color: "#059669" })} placeholder="Auto-calculated" />
               </Field>
             </div>
-          )}
-        </Section>
-
-        {/* ── Attachments ── */}
-        <Section title="Attachments (optional)" emoji="📎">
-          {[1, 2].map((n) => (
-            <div key={n}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 10 }}>Attachment {n}</div>
-              <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
-                <label style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 16px", border: "1.5px solid #E5E7EB", borderRadius: 8, cursor: "pointer", fontSize: 13, color: "#374151", fontWeight: 500, background: "#F9FAFB", whiteSpace: "nowrap" }}>
-                  📎 Choose File
-                  <input type="file" style={{ display: "none" }} />
-                </label>
-                <span style={{ color: "#9CA3AF", fontSize: 13 }}>or</span>
-                <input
-                  type="url"
-                  value={form[`attachment${n}Link`] || ""}
-                  onChange={(e) => set(`attachment${n}Link`, e.target.value)}
-                  style={{ ...inp(""), flex: 1, minWidth: 200 }}
-                  placeholder="Paste a Drive / web link"
-                />
-              </div>
-              {n === 1 && <div style={{ height: 1, background: "#F3F4F6", margin: "20px 0" }} />}
-            </div>
-          ))}
-        </Section>
-
-        {/* ── Past Renewals (read-only history) ── */}
-        {renewal.pastRenewals?.length > 0 && (
-          <Section title="Past Renewals History" emoji="📜">
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
-              <thead>
-                <tr style={{ background: "#F9FAFB" }}>
-                  {["#", "Renewal Date", "Amount Paid", "Notes"].map((h) => (
-                    <th key={h} style={{ padding: "10px 16px", fontSize: 11, fontWeight: 700, color: "#6B7280", textAlign: "left", textTransform: "uppercase", letterSpacing: 0.5, borderBottom: "1px solid #F3F4F6" }}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {renewal.pastRenewals.map((p, i) => (
-                  <tr key={p.id} style={{ borderBottom: "1px solid #F9FAFB" }}>
-                    <td style={{ padding: "12px 16px", fontSize: 12, color: "#9CA3AF" }}>{i + 1}</td>
-                    <td style={{ padding: "12px 16px", fontSize: 14, color: "#374151" }}>
-                      {new Date(p.date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
-                    </td>
-                    <td style={{ padding: "12px 16px", fontSize: 14, fontWeight: 600, color: "#111" }}>
-                      {p.currency} {Number(p.cost).toLocaleString("en-IN")}
-                    </td>
-                    <td style={{ padding: "12px 16px", fontSize: 13, color: "#6B7280" }}>{p.notes || "—"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
           </Section>
         )}
 
-        {/* ── Bottom submit ── */}
+        {/* ── Section 3: Payment & Other Details (only if renewal_required = Yes) ── */}
+        {showRenewalFields && (
+          <Section title="Payment & Other Details" emoji="💳">
+            <div style={grid2}>
+              <Field label="Renewal Amount">
+                <input type="number" min="0" step="0.01" value={form.renewal_amount} onChange={(e) => set("renewal_amount", e.target.value)} style={inp("")} placeholder="0.00" />
+              </Field>
+              <Field label="Payment Transfer Mode">
+                <select value={form.payment_mode} onChange={(e) => set("payment_mode", e.target.value)} style={sel("")}>
+                  <option value="">Select mode</option>
+                  {["Bank Transfer", "Credit Card", "Debit Card", "UPI", "Cheque", "Cash", "Other"].map((m) => (
+                    <option key={m} value={m}>{m}</option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Bank / Card Holder">
+                <select value={form.card_holder} onChange={(e) => set("card_holder", e.target.value)} style={sel("")}>
+                  <option value="">Select holder</option>
+                  <option value="admin">Admin</option>
+                  <option value="accounts">Accounts</option>
+                </select>
+              </Field>
+              <Field label="Invoice / Ref No">
+                <input value={form.invoice_ref} onChange={(e) => set("invoice_ref", e.target.value)} style={inp("")} placeholder="INV-XXXX" />
+              </Field>
+              <Field label="Renewed By">
+                <input value={form.renewed_by} onChange={(e) => set("renewed_by", e.target.value)} style={inp("")} placeholder="Auto-filled from renewal" />
+              </Field>
+              <Field label="Next Renewal Due Date">
+                <input type="date" value={form.next_due_date} onChange={(e) => set("next_due_date", e.target.value)} style={inp("")} />
+              </Field>
+              <Field label="Proof Link">
+                <input type="url" value={form.proof_link} onChange={(e) => set("proof_link", e.target.value)} style={inp("")} placeholder="https://drive.google.com/..." />
+              </Field>
+            </div>
+          </Section>
+        )}
+
+        {/* ── Section 4: Additional Information (only if renewal_required = Yes) ── */}
+        {showRenewalFields && (
+          <Section title="Additional Information" emoji="ℹ️">
+            {/* Warranty-only fields */}
+            {isWarranty && (
+              <div style={{ ...grid2, marginBottom: 20 }}>
+                <Field label="User">
+                  <input value={form.user_person} onChange={(e) => set("user_person", e.target.value)} style={inp("")} placeholder="Auto-filled" />
+                </Field>
+                <Field label="User Department">
+                  <input value={form.user_department} readOnly style={readOnly()} placeholder="Auto-filled" />
+                </Field>
+              </div>
+            )}
+
+            <div style={grid2}>
+              <Field label="Remarks">
+                <textarea value={form.remarks} onChange={(e) => set("remarks", e.target.value)}
+                  style={{ ...inp(""), resize: "vertical", minHeight: 80 }}
+                  placeholder="Any notes about this renewal event" />
+              </Field>
+              <Field label="Email Sent?">
+                <select value={form.email_sent} onChange={(e) => set("email_sent", e.target.value)} style={sel("")}>
+                  <option value="No">No</option>
+                  <option value="Yes">Yes</option>
+                </select>
+              </Field>
+            </div>
+          </Section>
+        )}
+
+        {/* ── If Renewal Required = No, show a simple closed notice ── */}
+        {form.renewal_required === "No" && (
+          <div style={{ background: "#FEF3C7", border: "1px solid #FCD34D", borderRadius: 12, padding: "20px 24px", display: "flex", alignItems: "center", gap: 12 }}>
+            <span style={{ fontSize: 24 }}>⚠️</span>
+            <div>
+              <div style={{ fontWeight: 700, color: "#92400E", fontSize: 14 }}>Marked as Closed</div>
+              <div style={{ color: "#B45309", fontSize: 13, marginTop: 3 }}>
+                This renewal event will be recorded as <strong>Closed</strong> with no new renewal details.
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Submit ── */}
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 12, marginBottom: 40 }}>
           <button onClick={onCancel} style={cancelBtnStyle}>Cancel</button>
-          <button onClick={handleSave} style={saveBtnStyle}>💾 Save Changes</button>
+          <button onClick={handleSave} disabled={loading} style={{ ...saveBtnStyle, opacity: loading ? 0.7 : 1 }}>
+            {loading ? "Saving…" : "✅ Record Event"}
+          </button>
         </div>
 
       </div>
@@ -377,7 +347,7 @@ export default function UpdateForm({ renewal, categories = [], onSave, onCancel 
 }
 
 // ────────────────────────────────────────────────────────
-// Local sub-components
+// Sub-components
 // ────────────────────────────────────────────────────────
 function Section({ title, emoji, children }) {
   return (
@@ -391,7 +361,7 @@ function Section({ title, emoji, children }) {
   );
 }
 
-function Field({ label, name, error, required, children }) {
+function Field({ label, error, required, children }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
       <label style={{ fontSize: 12, fontWeight: 600, color: "#374151" }}>
@@ -407,16 +377,15 @@ const grid2 = { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 };
 const grid3 = { display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 20 };
 
 const cancelBtnStyle = {
-  padding: "12px 28px", borderRadius: 10,
+  padding: "11px 24px", borderRadius: 10,
   border: "1.5px solid #E5E7EB", background: "#fff",
-  color: "#374151", fontSize: 15, fontWeight: 600,
+  color: "#374151", fontSize: 14, fontWeight: 600,
   cursor: "pointer", fontFamily: "inherit",
 };
 
 const saveBtnStyle = {
-  padding: "12px 32px", borderRadius: 10,
-  border: "none", background: LIME, color: "#000",
-  fontSize: 15, fontWeight: 700,
-  cursor: "pointer", fontFamily: "inherit",
-  display: "flex", alignItems: "center", gap: 8,
+  padding: "11px 28px", borderRadius: 10,
+  border: "none", background: "#ADE80A", color: "#000",
+  fontSize: 14, fontWeight: 700, cursor: "pointer",
+  fontFamily: "inherit", display: "flex", alignItems: "center", gap: 8,
 };

@@ -403,7 +403,7 @@ const saveStyle   = { padding: "10px 26px", borderRadius: 8, border: "none", bac
 // ────────────────────────────────────────────────────────
 // DASHBOARD
 // ────────────────────────────────────────────────────────
-export default function Dashboard({ categories = [], onNew, onEdit, onSelect, onUpdate }) {
+export default function Dashboard({ categories = [], onNew, onEdit, onSelect, onUpdate, onNavigateUpdateForm }) {
   const [renewals,  setRenewals]  = useState([]);
   const [loading,   setLoading]   = useState(true);
   const [search,    setSearch]    = useState("");
@@ -460,7 +460,7 @@ export default function Dashboard({ categories = [], onNew, onEdit, onSelect, on
         subtitle="Track and manage all renewals & warranties"
         actions={
           <div style={{ display: "flex", gap: 10 }}>
-            <NavbarButton onClick={onUpdate} label="✏️ Update Renewal" variant="secondary" />
+            <NavbarButton onClick={onNavigateUpdateForm} label="✏️ Update Renewal" variant="secondary" />
             <NavbarButton onClick={onNew} icon="+" label="Create Renewal" />
           </div>
         }
