@@ -12,6 +12,7 @@ const DEFAULT_REMIND = {
 
 const BLANK = {
   itemName: "", category: "", subcategory: "", description: "", vendor: "",
+  renewerName: "", renewerDepartment: "Admin", renewerEmail: "",
   selectedEmployeeId: "",
   empName: "", empId: "", department: "", designation: "",
   email: "", reportingManager: "",
@@ -26,6 +27,19 @@ const addDays   = (d, n) => { const r = new Date(d); r.setDate(r.getDate() + n);
 const addMonths = (d, n) => { const r = new Date(d); r.setMonth(r.getMonth() + n); return r; };
 const fmtISO    = (d)    => d ? new Date(d).toISOString().split("T")[0] : "";
 const fmtDate   = (d)    => d ? new Date(d).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "";
+
+const getAdminRenewer = (employees) => {
+  const admin = employees.find((emp) =>
+    (emp.Department || "").trim().toLowerCase().includes("admin") &&
+    ((emp["Department Head"] || "").trim() || (emp["Dept Head Email"] || "").trim())
+  );
+
+  return {
+    renewerName: admin?.["Department Head"] || admin?.Emp_name || "",
+    renewerDepartment: "Admin",
+    renewerEmail: admin?.["Dept Head Email"] || admin?.["desig Email Id"] || "",
+  };
+};
 
 export default function NewForm({ onSave, onCancel }) {
   const [form,       setForm]       = useState(BLANK);
@@ -57,6 +71,7 @@ export default function NewForm({ onSave, onCancel }) {
         console.log("Employees loaded:", data.length);
         console.log("Sample:", data[0]);
         setEmployees(data);
+        setForm(f => ({ ...f, ...getAdminRenewer(data) }));
       })
       .catch(err => console.error("Employee fetch error:", err));
   }, []);
@@ -231,8 +246,23 @@ export default function NewForm({ onSave, onCancel }) {
           </div>
         </Section>
 
-        {/* ── Renewer Details ── */}
+        {/* Renewer Details */}
         <Section title="Renewer Details" emoji="👤">
+          <div style={grid3}>
+            <Field label="Renewer Name">
+              <input value={form.renewerName} readOnly style={readOnly()} placeholder="Admin department head" />
+            </Field>
+            <Field label="Renewer Department">
+              <input value={form.renewerDepartment} readOnly style={readOnly()} />
+            </Field>
+            <Field label="Renewer Email">
+              <input value={form.renewerEmail} readOnly style={readOnly()} placeholder="Admin dept head email" />
+            </Field>
+          </div>
+        </Section>
+
+        {/* User Details */}
+        <Section title="User Details" emoji="👤">
           <div style={{ marginBottom: 20 }}>
             <Field label="Employee Name" required>
               <select value={form.selectedEmployeeId}

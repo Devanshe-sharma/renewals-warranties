@@ -44,13 +44,13 @@ router.get('/next-id', async (req, res) => {
 // Returns all active renewal items for the dropdown
 // Shape: [{ item_id, item_name, category, subcategory,
 //           start_date, frequency, user_person, user_department,
-//           emp_name }]
+//           renewer_name, emp_name }]
 // ────────────────────────────────────────────────────────
 router.get('/items', async (req, res) => {
   try {
     const items = await Newrenewal
       .find({ active: true })
-      .select('item_id item_name category subcategory start_date frequency user_person user_department emp_name emp_id')
+      .select('item_id item_name category subcategory start_date frequency user_person user_department renewer_name emp_name emp_id')
       .sort({ item_name: 1 })
       .lean();
 
@@ -109,7 +109,7 @@ router.post('/', async (req, res) => {
       payment_mode:   b.payment_mode   || '',
       card_holder:    b.card_holder    || '',
       invoice_ref:    b.invoice_ref    || '',
-      renewed_by:     b.renewed_by     || linkedItem.emp_name || '',
+      renewed_by:     b.renewed_by     || linkedItem.renewer_name || linkedItem.emp_name || '',
       next_due_date:  b.next_due_date  ? new Date(b.next_due_date) : null,
       proof_link:     b.proof_link     || '',
 
@@ -139,7 +139,7 @@ router.post('/', async (req, res) => {
               renewal_date: new Date(b.new_renewal_date),
               expiry_date:  newExpiryDate,
               amount:       b.renewal_amount ? Number(b.renewal_amount) : null,
-              renewed_by:   b.renewed_by || linkedItem.emp_name || '',
+              renewed_by:   b.renewed_by || linkedItem.renewer_name || linkedItem.emp_name || '',
               notes:        b.remarks || '',
             },
           },

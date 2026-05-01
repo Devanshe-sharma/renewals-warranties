@@ -4,7 +4,8 @@ import Dashboard from "./pages/dashboard";
 import NewForm from "./pages/newform";
 import UpdateForm from "./pages/updateform";
 import RenewalEventsPage from "./pages/Renewaleventspage";
-import { useCategoriesStore } from "./pages/categories";
+import { useCategoriesStore, CategoriesPage } from "./pages/categories";
+import { UserProvider } from "./context/UserContext";
 import "./App.css";
 
 // ── View map ──────────────────────────────────────────────
@@ -33,6 +34,7 @@ export default function App() {
   const activeNav =
     view === "dashboard" || view === "new"          ? "dashboard" :
     view === "update"    || view === "record-event" ? "update"    :
+    view === "categories"                           ? "categories" :
     "dashboard";
 
   // ── Page renderer ─────────────────────────────────────
@@ -72,6 +74,11 @@ export default function App() {
           />
         );
 
+      case "categories":
+        return (
+          <CategoriesPage store={catStore} />
+        );
+
       // ── Default: Renewal List dashboard ───────────────
       default:
         return (
@@ -85,41 +92,43 @@ export default function App() {
   };
 
   return (
-    <div style={{ fontFamily: "'Outfit', -apple-system, BlinkMacSystemFont, sans-serif", background: "#F3F4F6", minHeight: "100vh" }}>
-      <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <UserProvider>
+      <div style={{ fontFamily: "'Outfit', -apple-system, BlinkMacSystemFont, sans-serif", background: "#F3F4F6", minHeight: "100vh" }}>
+        <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
 
-      <Sidebar activeNav={activeNav} onNav={handleNav} />
+        <Sidebar activeNav={activeNav} onNav={handleNav} />
 
-      <main style={{ marginLeft: 220, padding: "32px 36px", minHeight: "100vh", boxSizing: "border-box" }}>
-        {renderPage()}
-      </main>
+        <main style={{ marginLeft: 220, padding: "32px 36px", minHeight: "100vh", boxSizing: "border-box" }}>
+          {renderPage()}
+        </main>
 
-      {toast && (
-        <div style={{
-          position: "fixed", bottom: 24, right: 24, zIndex: 9999,
-          background: toast.type === "success" ? "#111827" : "#EF4444",
-          color: "#fff", padding: "12px 20px", borderRadius: 10,
-          fontSize: 14, fontWeight: 600,
-          boxShadow: "0 4px 20px rgba(0,0,0,0.18)",
-          display: "flex", alignItems: "center", gap: 10,
-          animation: "toastIn 0.2s ease",
-        }}>
-          <span>{toast.type === "success" ? "✓" : "✗"}</span>
-          {toast.msg}
-        </div>
-      )}
+        {toast && (
+          <div style={{
+            position: "fixed", bottom: 24, right: 24, zIndex: 9999,
+            background: toast.type === "success" ? "#111827" : "#EF4444",
+            color: "#fff", padding: "12px 20px", borderRadius: 10,
+            fontSize: 14, fontWeight: 600,
+            boxShadow: "0 4px 20px rgba(0,0,0,0.18)",
+            display: "flex", alignItems: "center", gap: 10,
+            animation: "toastIn 0.2s ease",
+          }}>
+            <span>{toast.type === "success" ? "✓" : "✗"}</span>
+            {toast.msg}
+          </div>
+        )}
 
-      <style>{`
-        * { box-sizing: border-box; }
-        input:focus, select:focus, textarea:focus {
-          border-color: #ADE80A !important;
-          box-shadow: 0 0 0 3px #ADE80A40 !important;
-        }
-        ::-webkit-scrollbar { width: 5px; height: 5px; }
-        ::-webkit-scrollbar-thumb { background: #D1D5DB; border-radius: 3px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        @keyframes toastIn { from { transform: translateY(10px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-      `}</style>
-    </div>
+        <style>{`
+          * { box-sizing: border-box; }
+          input:focus, select:focus, textarea:focus {
+            border-color: #ADE80A !important;
+            box-shadow: 0 0 0 3px #ADE80A40 !important;
+          }
+          ::-webkit-scrollbar { width: 5px; height: 5px; }
+          ::-webkit-scrollbar-thumb { background: #D1D5DB; border-radius: 3px; }
+          ::-webkit-scrollbar-track { background: transparent; }
+          @keyframes toastIn { from { transform: translateY(10px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        `}</style>
+      </div>
+    </UserProvider>
   );
 }

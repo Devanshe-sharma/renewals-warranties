@@ -6,6 +6,7 @@ const SIDEBAR = "#0F1923";
 const NAV_ITEMS = [
   { id: "dashboard", icon: "▦", label: "Renewal List"  },
   { id: "update", icon: "✏️", label: "Update Renewal"  },
+  { id: "categories", icon: "📂", label: "Categories" },
 ];
 
 export default function Sidebar({ activeNav, onNav }) {

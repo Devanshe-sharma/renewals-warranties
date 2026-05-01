@@ -17,6 +17,9 @@ const NewrenewalSchema = new mongoose.Schema(
     vendor:      { type: String, default: '', trim: true },
 
     // ── Renewer Details ──────────────────────────────
+    renewer_name:       { type: String, default: '' },
+    renewer_department: { type: String, default: '' },
+    renewer_email:      { type: String, default: '' },
     selected_employee_id: { type: String, default: '' },
     emp_name:             { type: String, default: '' },
     emp_id:               { type: String, default: '' },

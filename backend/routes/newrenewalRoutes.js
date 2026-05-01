@@ -1,6 +1,7 @@
 const express = require('express');
 const router  = express.Router();
 const Newrenewal = require('../models/Newrenewal');
+const Employee = require('../models/Employee');
 
 // ── Helper: calculate reminder dates ─────────────────────
 function calcReminderDates(endDate, r1, r2, rf) {
@@ -18,6 +19,24 @@ function calcReminderDates(endDate, r1, r2, rf) {
   };
 }
 
+async function getAdminDeptHead() {
+  const admin = await Employee.findOne({
+    Department: { $regex: /admin/i },
+    $or: [
+      { 'Department Head': { $ne: '' } },
+      { 'Dept Head Email': { $ne: '' } },
+    ],
+  }).lean();
+
+  if (!admin) return { name: '', department: 'Admin', email: '' };
+
+  return {
+    name: admin['Department Head'] || admin.Emp_name || '',
+    department: 'Admin',
+    email: admin['Dept Head Email'] || admin['desig Email Id'] || '',
+  };
+}
+
 // ────────────────────────────────────────────────────────
 // POST /api/renewals
 // Create new renewal
@@ -25,6 +44,10 @@ function calcReminderDates(endDate, r1, r2, rf) {
 router.post('/', async (req, res) => {
   try {
     const b = req.body;
+    const adminRenewer = await getAdminDeptHead();
+    const renewerName = b.renewerName || adminRenewer.name;
+    const renewerDepartment = b.renewerDepartment || adminRenewer.department;
+    const renewerEmail = b.renewerEmail || adminRenewer.email;
 
     const reminderDates = calcReminderDates(
       b.endDate,
@@ -42,6 +65,9 @@ router.post('/', async (req, res) => {
       vendor:      b.vendor       || '',
 
       // Renewer Details
+      renewer_name:         renewerName,
+      renewer_department:   renewerDepartment,
+      renewer_email:        renewerEmail,
       selected_employee_id: b.selectedEmployeeId || '',
       emp_name:             b.empName            || '',
       emp_id:               b.empId              || '',
@@ -126,6 +152,10 @@ router.get('/:id', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     const b = req.body;
+    const adminRenewer = await getAdminDeptHead();
+    const renewerName = b.renewerName || adminRenewer.name;
+    const renewerDepartment = b.renewerDepartment || adminRenewer.department;
+    const renewerEmail = b.renewerEmail || adminRenewer.email;
 
     const reminderDates = calcReminderDates(
       b.endDate,
@@ -143,6 +173,9 @@ router.put('/:id', async (req, res) => {
           subcategory:          b.subcategory        || '',
           description:          b.description        || '',
           vendor:               b.vendor             || '',
+          renewer_name:         renewerName,
+          renewer_department:   renewerDepartment,
+          renewer_email:        renewerEmail,
           selected_employee_id: b.selectedEmployeeId || '',
           emp_name:             b.empName            || '',
           emp_id:               b.empId              || '',

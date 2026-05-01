@@ -23,6 +23,12 @@ const BLANK = {
   invoice_ref: "", renewed_by: "", next_due_date: "", proof_link: "",
   // additional
   user_person: "", user_department: "", remarks: "", email_sent: "No",
+  // renewer details
+  renewerName: "", renewerDepartment: "", renewerEmail: "",
+  // user details
+  selectedEmployeeId: "",
+  empName: "", empId: "", department: "", designation: "",
+  email: "", reportingManager: "",
 };
 
 // ────────────────────────────────────────────────────────
@@ -34,10 +40,38 @@ export default function UpdateForm({ onSave, onCancel }) {
   const [items,     setItems]     = useState([]);   // dropdown: all active renewals
   const [nextId,    setNextId]    = useState("");   // preview event_id
   const [loading,   setLoading]   = useState(false);
+  const [employees, setEmployees] = useState([]);   // for user details section
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
   // ── Fetch item list for dropdown ──────────────────────
+  const handleEmployeeSelect = (id) => {
+    const emp = employees.find(e => e._id === id);
+    if (!emp) {
+      setForm(f => ({
+        ...f,
+        selectedEmployeeId: "",
+        empName: "", empId: "", department: "",
+        designation: "", email: "", reportingManager: "",
+        user_person: "", user_department: "",
+      }));
+      return;
+    }
+
+    setForm(f => ({
+      ...f,
+      selectedEmployeeId: id,
+      empName:          emp.Emp_name              || "",
+      empId:            String(emp.Emp_id)         || "",
+      department:       emp.Department             || "",
+      designation:      emp.Designation            || "",
+      email:            emp["desig Email Id"]      || "",
+      reportingManager: emp["Reporting Manager"]   || "",
+      user_person:      emp.Emp_name               || "",
+      user_department:  emp.Department             || "",
+    }));
+  };
+
   useEffect(() => {
     fetch(`${process.env.REACT_APP_API_URL}/api/renewals?active=true`)
       .then((r) => r.json())
@@ -48,13 +82,44 @@ export default function UpdateForm({ onSave, onCancel }) {
       .then((r) => r.json())
       .then((res) => { if (res.success) setNextId(res.event_id); })
       .catch((err) => console.error("Next ID fetch error:", err));
+
+    // ── Fetch employees for user details ──────────────────
+    fetch(`${process.env.REACT_APP_API_URL}/api/employee`)
+      .then(r => r.json())
+      .then(data => {
+        console.log("Employees loaded:", data.length);
+        setEmployees(data);
+        // Set admin renewer details from employees
+        const admin = data.find((emp) =>
+          (emp.Department || "").trim().toLowerCase().includes("admin") &&
+          ((emp["Department Head"] || "").trim() || (emp["Dept Head Email"] || "").trim())
+        );
+        if (admin) {
+          setForm(f => ({
+            ...f,
+            renewerName: f.renewerName || admin["Department Head"] || admin.Emp_name || "",
+            renewerDepartment: f.renewerDepartment || "Admin",
+            renewerEmail: f.renewerEmail || admin["Dept Head Email"] || admin["desig Email Id"] || "",
+          }));
+        }
+      })
+      .catch(err => console.error("Employee fetch error:", err));
   }, []);
 
   // ── Item selection → autofill from linked renewal ────
   const handleItemSelect = (item_id) => {
     const item = items.find((i) => i.item_id === item_id);
     if (!item) {
-      setForm(BLANK);
+      const admin = employees.find((emp) =>
+        (emp.Department || "").trim().toLowerCase().includes("admin") &&
+        ((emp["Department Head"] || "").trim() || (emp["Dept Head Email"] || "").trim())
+      );
+      setForm({
+        ...BLANK,
+        renewerName: admin?.["Department Head"] || admin?.Emp_name || "",
+        renewerDepartment: admin ? "Admin" : "",
+        renewerEmail: admin?.["Dept Head Email"] || admin?.["desig Email Id"] || "",
+      });
       return;
     }
 
@@ -72,7 +137,17 @@ export default function UpdateForm({ onSave, onCancel }) {
       prev_start_date:  prevStart  ? fmtISO(prevStart)  : "",
       prev_expiry_date: prevExpiry ? fmtISO(prevExpiry) : "",
       frequency:        item.frequency   || "",
-      renewed_by:       item.emp_name    || "",
+      renewed_by:       item.renewer_name || item.emp_name || "",
+      renewerName:      item.renewer_name       || f.renewerName       || "",
+      renewerDepartment:item.renewer_department || f.renewerDepartment || "Admin",
+      renewerEmail:     item.renewer_email      || f.renewerEmail      || "",
+      selectedEmployeeId: item.selected_employee_id || "",
+      empName:          item.emp_name           || "",
+      empId:            item.emp_id             || "",
+      department:       item.department         || "",
+      designation:      item.designation        || "",
+      email:            item.email              || "",
+      reportingManager: item.reporting_manager  || "",
       user_person:      item.user_person     || "",
       user_department:  item.user_department || "",
       // reset decision fields
@@ -84,6 +159,7 @@ export default function UpdateForm({ onSave, onCancel }) {
     setErrors({});
   };
 
+  // ── Employee select → autofill ────────────────────────
   // ── Auto-calculate new expiry ─────────────────────────
   useEffect(() => {
     if (form.new_renewal_date && form.frequency) {
@@ -231,7 +307,59 @@ export default function UpdateForm({ onSave, onCancel }) {
           </div>
         </Section>
 
-        {/* ── Section 2: New Renewal Details (only if renewal_required = Yes) ── */}
+        {/* ── Section 2: Renewer Details ── */}
+        {showRenewalFields && (
+          <>
+        <Section title="Renewer Details" emoji="👤">
+          <div style={grid3}>
+            <Field label="Renewer Name">
+              <input value={form.renewerName} readOnly style={readOnly()} placeholder="Admin department head" />
+            </Field>
+            <Field label="Renewer Department">
+              <input value={form.renewerDepartment} readOnly style={readOnly()} />
+            </Field>
+            <Field label="Renewer Email">
+              <input value={form.renewerEmail} readOnly style={readOnly()} placeholder="Admin dept head email" />
+            </Field>
+          </div>
+        </Section>
+
+        {/* ── Section 3: User Details ── */}
+        <Section title="User Details" emoji="👤">
+          <div style={{ marginBottom: 20 }}>
+            <Field label="Employee Name">
+              <select value={form.selectedEmployeeId} onChange={(e) => handleEmployeeSelect(e.target.value)} style={sel("")}>
+                <option value="">Select employee</option>
+                {employees.map((em) => (
+                  <option key={em._id} value={em._id}>{em.Emp_name}</option>
+                ))}
+              </select>
+            </Field>
+          </div>
+
+          <div style={grid2}>
+            <Field label="Employee ID">
+              <input value={form.empId} readOnly style={readOnly()} placeholder="Auto-filled" />
+            </Field>
+            <Field label="Department">
+              <input value={form.department} readOnly style={readOnly()} placeholder="Auto-filled" />
+            </Field>
+            <Field label="Designation">
+              <input value={form.designation} readOnly style={readOnly()} placeholder="Auto-filled" />
+            </Field>
+            <Field label="Email">
+              <input value={form.email} readOnly style={readOnly()} placeholder="Auto-filled" />
+            </Field>
+            <Field label="CC – Reporting Manager">
+              <input value={form.reportingManager} readOnly style={readOnly()} placeholder="Auto-filled" />
+            </Field>
+          </div>
+        </Section>
+
+          </>
+        )}
+
+        {/* ── Section 4: New Renewal Details (only if renewal_required = Yes) ── */}
         {showRenewalFields && (
           <Section title="New Renewal Details" emoji="🔄">
             <div style={grid3}>
@@ -251,7 +379,7 @@ export default function UpdateForm({ onSave, onCancel }) {
           </Section>
         )}
 
-        {/* ── Section 3: Payment & Other Details (only if renewal_required = Yes) ── */}
+        {/* ── Section 5: Payment & Other Details (only if renewal_required = Yes) ── */}
         {showRenewalFields && (
           <Section title="Payment & Other Details" emoji="💳">
             <div style={grid2}>
@@ -289,7 +417,7 @@ export default function UpdateForm({ onSave, onCancel }) {
           </Section>
         )}
 
-        {/* ── Section 4: Additional Information (only if renewal_required = Yes) ── */}
+        {/* ── Section 6: Additional Information (only if renewal_required = Yes) ── */}
         {showRenewalFields && (
           <Section title="Additional Information" emoji="ℹ️">
             {/* Warranty-only fields */}

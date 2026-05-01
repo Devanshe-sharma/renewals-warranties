@@ -26,6 +26,19 @@ const addDays  = (d, n) => { const r = new Date(d); r.setDate(r.getDate() + n); 
 const addMonths= (d, n) => { const r = new Date(d); r.setMonth(r.getMonth() + n); return r; };
 const daysBetween = (a, b) => Math.round((new Date(b) - new Date(a)) / 86400000);
 
+const getAdminRenewer = (employees) => {
+  const admin = employees.find((emp) =>
+    (emp.Department || "").trim().toLowerCase().includes("admin") &&
+    ((emp["Department Head"] || "").trim() || (emp["Dept Head Email"] || "").trim())
+  );
+
+  return {
+    renewerName: admin?.["Department Head"] || admin?.Emp_name || "",
+    renewerDepartment: "Admin",
+    renewerEmail: admin?.["Dept Head Email"] || admin?.["desig Email Id"] || "",
+  };
+};
+
 export function getStatus(endDate) {
   if (!endDate) return "active";
   const d = daysBetween(new Date(), new Date(endDate));
@@ -77,7 +90,10 @@ const mapRenewal = (r) => ({
   subcategory:        r.subcategory          || "",
   description:        r.description          || "",
   vendor:             r.vendor               || "",
-  responsible:        r.emp_name             || "",
+  renewerName:        r.renewer_name         || r.emp_name || "",
+  renewerDepartment:  r.renewer_department   || r.department || "Admin",
+  renewerEmail:       r.renewer_email        || r.email || "",
+  responsible:        r.renewer_name         || r.emp_name || "",
   empName:            r.emp_name             || "",
   empId:              r.emp_id               || "",
   department:         r.department           || "",
@@ -118,7 +134,13 @@ function EditModal({ renewal, categories, onClose, onSaved }) {
   useEffect(() => {
     fetch(`${API}/api/employee`)
       .then(r => r.json())
-      .then(data => setEmployees(data))
+      .then(data => {
+        setEmployees(data);
+        setForm(f => {
+          if (f.renewerName && f.renewerEmail) return f;
+          return { ...f, ...getAdminRenewer(data) };
+        });
+      })
       .catch(err => console.error(err));
   }, []);
 
@@ -266,6 +288,21 @@ function EditModal({ renewal, categories, onClose, onSaved }) {
 
           {/* Renewer Details */}
           <MSection title="Renewer Details">
+            <div style={g3}>
+              <MField label="Renewer Name">
+                <input value={form.renewerName || ""} readOnly style={ro()} placeholder="Admin department head" />
+              </MField>
+              <MField label="Renewer Department">
+                <input value={form.renewerDepartment || "Admin"} readOnly style={ro()} />
+              </MField>
+              <MField label="Renewer Email">
+                <input value={form.renewerEmail || ""} readOnly style={ro()} placeholder="Admin dept head email" />
+              </MField>
+            </div>
+          </MSection>
+
+          {/* User Details */}
+          <MSection title="User Details">
             <MField label="Employee">
               <select value={form.selectedEmployeeId} onChange={e => handleEmployeeSelect(e.target.value)} style={sel("")}>
                 <option value="">Select employee</option>
