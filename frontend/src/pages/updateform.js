@@ -44,6 +44,17 @@ export default function UpdateForm({ onSave, onCancel }) {
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
+  // ── Fetch items for dropdown ──────────────────────────
+  const fetchItems = async () => {
+    try {
+      const res = await fetch(`${process.env.REACT_APP_API_URL}/api/renewal-events/items`);
+      const data = await res.json();
+      if (data.success) setItems(data.data);
+    } catch (err) {
+      console.error("Items fetch error:", err);
+    }
+  };
+
   // ── Fetch item list for dropdown ──────────────────────
   const handleEmployeeSelect = (id) => {
     const emp = employees.find(e => e._id === id);
@@ -73,10 +84,7 @@ export default function UpdateForm({ onSave, onCancel }) {
   };
 
   useEffect(() => {
-    fetch(`${process.env.REACT_APP_API_URL}/api/renewal-events/items`)
-      .then((r) => r.json())
-      .then((res) => { if (res.success) setItems(res.data); })
-      .catch((err) => console.error("Items fetch error:", err));
+    fetchItems();
 
     fetch(`${process.env.REACT_APP_API_URL}/api/renewal-events/next-id`)
       .then((r) => r.json())
@@ -212,6 +220,7 @@ export default function UpdateForm({ onSave, onCancel }) {
       const data = await res.json();
       if (data.success) {
         alert(`✅ Renewal event recorded — ID: ${data.data.event_id}`);
+        await fetchItems();
         onSave(data.data);
       } else {
         alert(`❌ Error: ${data.message}`);
