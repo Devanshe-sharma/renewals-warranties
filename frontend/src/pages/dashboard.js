@@ -595,15 +595,11 @@ export default function Dashboard({ categories = [], onNew, onEdit, onSelect, on
       const data = await res.json();
       if (data.success) setRenewals(data.data.map(mapRenewal));
 
-      const arRes = await fetch(`${API}/api/renewals/archived/list`);
-      const arData = await arRes.json();
-      let archivedItems = [];
-      if (arData.success) archivedItems = arData.data.map(mapRenewal);
-
       const evRes = await fetch(`${API}/api/renewal-events?status=Closed`);
       const evData = await evRes.json();
+      let archivedEvents = [];
       if (evData.success) {
-        const closedEvents = evData.data.map(e => ({
+        archivedEvents = evData.data.map(e => ({
           id:                 e.item_id,
           itemName:           e.item_name            || "",
           category:           e.category             || "",
@@ -614,11 +610,9 @@ export default function Dashboard({ categories = [], onNew, onEdit, onSelect, on
           isClosed:           true,
           eventId:            e.event_id,
           isRenewalEvent:     true,
-        }));
-        archivedItems = [...archivedItems, ...closedEvents];
+        })).sort((a, b) => new Date(b.closedAt) - new Date(a.closedAt));
       }
-
-      setArchived(archivedItems.sort((a, b) => new Date(b.closedAt) - new Date(a.closedAt)));
+      setArchived(archivedEvents);
     } catch (err) {
       console.error("Failed to fetch renewals:", err);
     } finally {
