@@ -15,6 +15,7 @@ const NewrenewalSchema = new mongoose.Schema(
     subcategory: { type: String, default: '', trim: true },
     description: { type: String, default: '', trim: true },
     vendor:      { type: String, default: '', trim: true },
+    authority:   { type: String, default: '', trim: true },
 
     // ── Renewer Details ──────────────────────────────
     renewer_name:       { type: String, default: '' },
@@ -55,6 +56,8 @@ const NewrenewalSchema = new mongoose.Schema(
 
     // ── Status ───────────────────────────────────────
     active: { type: Boolean, default: true },
+    is_closed: { type: Boolean, default: false },
+    closed_at: { type: Date, default: null },
 
     // ── Past Renewals (events log) ───────────────────
     past_renewals: { type: Array, default: [] },

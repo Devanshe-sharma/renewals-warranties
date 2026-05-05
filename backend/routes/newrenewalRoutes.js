@@ -63,6 +63,7 @@ router.post('/', async (req, res) => {
       subcategory: b.subcategory  || '',
       description: b.description  || '',
       vendor:      b.vendor       || '',
+      authority:   b.authority    || '',
 
       // Renewer Details
       renewer_name:         renewerName,
@@ -114,7 +115,7 @@ router.post('/', async (req, res) => {
 // ────────────────────────────────────────────────────────
 router.get('/', async (req, res) => {
   try {
-    const filter = {};
+    const filter = { is_closed: false };
     if (req.query.active)     filter.active     = req.query.active === 'true';
     if (req.query.category)   filter.category   = req.query.category;
     if (req.query.department) filter.department = req.query.department;
@@ -122,6 +123,20 @@ router.get('/', async (req, res) => {
 
     const renewals = await Newrenewal.find(filter).sort({ createdAt: -1 }).lean();
     res.json({ success: true, count: renewals.length, data: renewals });
+
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// ────────────────────────────────────────────────────────
+// GET /api/renewals/archived/list
+// Get all archived/closed renewals
+// ────────────────────────────────────────────────────────
+router.get('/archived/list', async (req, res) => {
+  try {
+    const archived = await Newrenewal.find({ is_closed: true }).sort({ closed_at: -1 }).lean();
+    res.json({ success: true, count: archived.length, data: archived });
 
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -173,6 +188,7 @@ router.put('/:id', async (req, res) => {
           subcategory:          b.subcategory        || '',
           description:          b.description        || '',
           vendor:               b.vendor             || '',
+          authority:            b.authority          || '',
           renewer_name:         renewerName,
           renewer_department:   renewerDepartment,
           renewer_email:        renewerEmail,

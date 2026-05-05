@@ -49,7 +49,7 @@ router.get('/next-id', async (req, res) => {
 router.get('/items', async (req, res) => {
   try {
     const items = await Newrenewal
-      .find({ active: true })
+      .find({ active: true, is_closed: false })
       .select('item_id item_name category subcategory start_date frequency user_person user_department renewer_name emp_name emp_id')
       .sort({ item_name: 1 })
       .lean();
@@ -132,6 +132,7 @@ router.post('/', async (req, res) => {
             start_date: new Date(b.new_renewal_date),
             end_date:   newExpiryDate,
             frequency:  b.frequency || linkedItem.frequency,
+            is_closed: false,
           },
           $push: {
             past_renewals: {
@@ -142,6 +143,19 @@ router.post('/', async (req, res) => {
               renewed_by:   b.renewed_by || linkedItem.renewer_name || linkedItem.emp_name || '',
               notes:        b.remarks || '',
             },
+          },
+        }
+      );
+    }
+
+    // If not renewing, mark as closed
+    if (b.renewal_required === 'No') {
+      await Newrenewal.findOneAndUpdate(
+        { item_id: linkedItem.item_id },
+        {
+          $set: {
+            is_closed: true,
+            closed_at: new Date(),
           },
         }
       );
