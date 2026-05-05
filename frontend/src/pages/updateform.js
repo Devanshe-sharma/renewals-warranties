@@ -257,7 +257,7 @@ export default function UpdateForm({ onSave, onCancel }) {
       <Navbar
         title="Record Renewal Event"
         subtitle="Log a renewal event against an existing renewal item"
-        breadcrumb={[{ label: "Dashboard", onClick: onCancel }, { label: "Record Renewal Event" }]}
+        breadcrumb={[{ label: "Renewal Events", onClick: onCancel }, { label: "Record Event" }]}
         actions={
           <>
             <button onClick={onCancel} style={cancelBtnStyle}>Cancel</button>

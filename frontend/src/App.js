@@ -59,7 +59,7 @@ export default function App() {
         return (
           <RenewalEventsPage
             onRecord={() => setView("record-event")}
-            onBack={() => setView("update")}
+            onBack={() => setView("dashboard")}
           />
         );
 
