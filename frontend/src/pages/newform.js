@@ -188,7 +188,7 @@ export default function NewForm({ onSave, onCancel }) {
         actions={
           <>
             <button onClick={onCancel} style={cancelBtnStyle}>Cancel</button>
-            <button onClick={handleSave} style={saveBtnStyle}>✅ Create Renewal</button>
+            <button onClick={handleSave} style={saveBtnStyle}> Create Renewal List</button>
           </>
         }
       />
