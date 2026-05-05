@@ -11,7 +11,7 @@ const DEFAULT_REMIND = {
 };
 
 const BLANK = {
-  itemName: "", category: "", subcategory: "", description: "", vendor: "",
+  itemName: "", category: "", subcategory: "", description: "", vendor: "", authority: "",
   renewerName: "", renewerDepartment: "Admin", renewerEmail: "",
   selectedEmployeeId: "",
   empName: "", empId: "", department: "", designation: "",
@@ -239,10 +239,16 @@ export default function NewForm({ onSave, onCancel }) {
           </div>
 
           <div style={{ marginTop: 20 }}>
-            <Field label="Vendor / Authority">
-              <input value={form.vendor} onChange={e => set("vendor", e.target.value)}
-                style={inp("")} placeholder="e.g. Google LLC" />
-            </Field>
+            <div style={grid2}>
+              <Field label="Vendor">
+                <input value={form.vendor} onChange={e => set("vendor", e.target.value)}
+                  style={inp("")} placeholder="" />
+              </Field>
+              <Field label="Authority (if applicable)">
+                <input value={form.authority} onChange={e => set("authority", e.target.value)}
+                  style={inp("")} placeholder="" />
+              </Field>
+            </div>
           </div>
         </Section>
 

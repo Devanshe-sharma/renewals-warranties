@@ -65,6 +65,137 @@ function DaysChip({ endDate }) {
   return <span style={{ color: d <= 7 ? "#EF4444" : d <= 30 ? "#F59E0B" : "#9CA3AF", fontSize: 12, fontWeight: 600 }}>in {d}d</span>;
 }
 
+// ────────────────────────────────────────────────────────
+// VIEW MODAL (read-only)
+// ────────────────────────────────────────────────────────
+function ViewModal({ renewal, onClose, onEdit }) {
+  return (
+    <div
+      onClick={onClose}
+      style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 1000, display: "flex", alignItems: "flex-start", justifyContent: "center", overflowY: "auto", padding: "40px 16px" }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{ background: "#fff", borderRadius: 16, width: "100%", maxWidth: 780, boxShadow: "0 20px 60px rgba(0,0,0,0.2)" }}
+      >
+        {/* Header */}
+        <div style={{ background: LIME, borderRadius: "16px 16px 0 0", padding: "16px 24px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: "#000" }}>View Renewal</div>
+            <div style={{ fontSize: 12, color: "#333", marginTop: 2 }}>{renewal.id} · {renewal.itemName}</div>
+          </div>
+          <button onClick={onClose} style={{ background: "rgba(0,0,0,0.1)", border: "none", borderRadius: 8, width: 32, height: 32, cursor: "pointer", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+        </div>
+
+        <div style={{ padding: 24, display: "flex", flexDirection: "column", gap: 20 }}>
+
+          {/* Renewal Details */}
+          <MSection title="Renewal Details">
+            <div style={g2}>
+              <ViewField label="Item ID" value={renewal.id} />
+              <ViewField label="Category" value={renewal.category} />
+            </div>
+            {renewal.subcategory && (
+              <div style={{ marginTop: 14 }}>
+                <ViewField label="Subcategory" value={renewal.subcategory} />
+              </div>
+            )}
+            <div style={{ ...g2, marginTop: 14 }}>
+              <ViewField label="Item Name" value={renewal.itemName} />
+              <ViewField label="Vendor" value={renewal.vendor || "—"} />
+              <ViewField label="Authority" value={renewal.authority || "—"} />
+            </div>
+            {renewal.description && (
+              <div style={{ marginTop: 14 }}>
+                <ViewField label="Description" value={renewal.description} multiline />
+              </div>
+            )}
+          </MSection>
+
+          {/* Renewer Details */}
+          <MSection title="Renewer Details">
+            <div style={g3}>
+              <ViewField label="Renewer Name" value={renewal.renewerName} />
+              <ViewField label="Renewer Department" value={renewal.renewerDepartment} />
+              <ViewField label="Renewer Email" value={renewal.renewerEmail} />
+            </div>
+          </MSection>
+
+          {/* User Details */}
+          <MSection title="User Details">
+            <div style={g2}>
+              <ViewField label="Employee Name" value={renewal.empName} />
+              <ViewField label="Employee ID" value={renewal.empId} />
+              <ViewField label="Department" value={renewal.department} />
+              <ViewField label="Designation" value={renewal.designation} />
+              <ViewField label="Email" value={renewal.email} />
+              <ViewField label="Reporting Manager" value={renewal.reportingManager} />
+            </div>
+          </MSection>
+
+          {/* Reminders */}
+          <MSection title="Reminders">
+            <div style={g3}>
+              <ViewField label="Start Date" value={fmtDate(renewal.startDate)} />
+              <ViewField label="End Date" value={fmtDate(renewal.endDate)} />
+              <ViewField label="Frequency" value={renewal.frequency} />
+              <ViewField label="1st Reminder (days before)" value={renewal.reminder1Days} />
+              <ViewField label="2nd Reminder (days before)" value={renewal.reminder2Days} />
+              <ViewField label="Final Reminder (days before)" value={renewal.reminderFinalDays} />
+            </div>
+          </MSection>
+
+          {/* Additional */}
+          <MSection title="Additional Details">
+            <div style={g2}>
+              {renewal.remarks && <ViewField label="Remarks" value={renewal.remarks} multiline />}
+              {renewal.link && <ViewField label="Website Link" value={renewal.link} />}
+            </div>
+            {renewal.category === "Warranty" && (
+              <div style={{ ...g2, marginTop: 14 }}>
+                <ViewField label="Assigned User" value={renewal.userPerson || "—"} />
+                <ViewField label="User Department" value={renewal.userDepartment || "—"} />
+              </div>
+            )}
+          </MSection>
+
+          {/* Attachments */}
+          {(renewal.attachment1Link || renewal.attachment2Link) && (
+            <MSection title="Attachments">
+              {renewal.attachment1Link && <ViewField label="Attachment 1" value={renewal.attachment1Link} link />}
+              {renewal.attachment2Link && <ViewField label="Attachment 2" value={renewal.attachment2Link} link />}
+            </MSection>
+          )}
+
+          {/* Footer buttons */}
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: 12, paddingTop: 8 }}>
+            <button onClick={onClose} style={cancelStyle}>Close</button>
+            <button onClick={onEdit} style={{ ...saveStyle, background: LIME }}>
+              ✏️ Edit
+            </button>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ViewField({ label, value, multiline, link }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+      <label style={{ fontSize: 11, fontWeight: 600, color: "#6B7280" }}>{label}</label>
+      {link ? (
+        <a href={value} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, color: "#0EA5E9", textDecoration: "none", wordBreak: "break-all" }}>{value}</a>
+      ) : multiline ? (
+        <div style={{ fontSize: 13, color: "#374151", lineHeight: 1.5, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{value}</div>
+      ) : (
+        <div style={{ fontSize: 13, color: "#374151" }}>{value || "—"}</div>
+      )}
+    </div>
+  );
+}
+
 function StatsCard({ label, value, sub, accent }) {
   return (
     <div style={{ background: "#fff", borderRadius: 12, padding: "20px 24px", boxShadow: "0 1px 4px rgba(0,0,0,0.07)", borderLeft: `3px solid ${accent || LIME}` }}>
@@ -90,6 +221,7 @@ const mapRenewal = (r) => ({
   subcategory:        r.subcategory          || "",
   description:        r.description          || "",
   vendor:             r.vendor               || "",
+  authority:          r.authority            || "",
   renewerName:        r.renewer_name         || r.emp_name || "",
   renewerDepartment:  r.renewer_department   || r.department || "Admin",
   renewerEmail:       r.renewer_email        || r.email || "",
@@ -116,6 +248,8 @@ const mapRenewal = (r) => ({
   cost:               r.cost                 ?? 0,
   currency:           r.currency             || "INR",
   active:             r.active               ?? true,
+  isClosed:           r.is_closed            ?? false,
+  closedAt:           r.closed_at            || null,
   pastRenewals:       r.past_renewals        || [],
 });
 
@@ -276,6 +410,9 @@ function EditModal({ renewal, categories, onClose, onSaved }) {
               </MField>
               <MField label="Vendor">
                 <input value={form.vendor} onChange={e => set("vendor", e.target.value)} style={inp("")} />
+              </MField>
+              <MField label="Authority (if applicable)">
+                <input value={form.authority} onChange={e => set("authority", e.target.value)} style={inp("")} />
               </MField>
             </div>
             <div style={{ marginTop: 14 }}>
@@ -442,11 +579,14 @@ const saveStyle   = { padding: "10px 26px", borderRadius: 8, border: "none", bac
 // ────────────────────────────────────────────────────────
 export default function Dashboard({ categories = [], onNew, onEdit, onSelect, onUpdate, onNavigateUpdateForm }) {
   const [renewals,  setRenewals]  = useState([]);
+  const [archived,  setArchived]  = useState([]);
   const [loading,   setLoading]   = useState(true);
   const [search,    setSearch]    = useState("");
   const [statusF,   setStatusF]   = useState("all");
   const [catF,      setCatF]      = useState("all");
-  const [selected,  setSelected]  = useState(null); // ← selected renewal for modal
+  const [viewMode,  setViewMode]  = useState(null);
+  const [editMode,  setEditMode]  = useState(null);
+  const [tab,       setTab]       = useState("active"); // ← "active" or "archived"
 
   const fetchRenewals = useCallback(async () => {
     try {
@@ -454,6 +594,10 @@ export default function Dashboard({ categories = [], onNew, onEdit, onSelect, on
       const res  = await fetch(`${API}/api/renewals`);
       const data = await res.json();
       if (data.success) setRenewals(data.data.map(mapRenewal));
+
+      const arRes = await fetch(`${API}/api/renewals/archived/list`);
+      const arData = await arRes.json();
+      if (arData.success) setArchived(arData.data.map(mapRenewal));
     } catch (err) {
       console.error("Failed to fetch renewals:", err);
     } finally {
@@ -468,14 +612,14 @@ export default function Dashboard({ categories = [], onNew, onEdit, onSelect, on
     { active: 0, expiring: 0, critical: 0, expired: 0 }
   );
 
-  const visible = renewals.filter((r) => {
+  const visible = (tab === "archived" ? archived : renewals).filter((r) => {
     const q           = search.toLowerCase();
     const name        = (r.itemName    || "").toLowerCase();
     const vendor      = (r.vendor      || "").toLowerCase();
     const responsible = (r.responsible || "").toLowerCase();
     return (
       (!q || name.includes(q) || vendor.includes(q) || responsible.includes(q)) &&
-      (statusF === "all" || getStatus(r.endDate) === statusF) &&
+      (tab === "archived" || (statusF === "all" || getStatus(r.endDate) === statusF)) &&
       (catF    === "all" || r.category === catF)
     );
   });
@@ -496,10 +640,14 @@ export default function Dashboard({ categories = [], onNew, onEdit, onSelect, on
         title="Renewals Dashboard"
         subtitle="Track and manage all renewals & warranties"
         actions={
-          <div style={{ display: "flex", gap: 10 }}>
-            <NavbarButton onClick={onNavigateUpdateForm} label="✏️ Update Renewal" variant="secondary" />
-            <NavbarButton onClick={onNew} icon="+" label="Create Renewal" />
-          </div>
+          tab === "active" ? (
+            <div style={{ display: "flex", gap: 10 }}>
+              <NavbarButton onClick={onNavigateUpdateForm} label="✏️ Update Renewal" variant="secondary" />
+              <NavbarButton onClick={onNew} icon="+" label="Create Renewal List" />
+            </div>
+          ) : (
+            <NavbarButton onClick={onNew} icon="+" label="Create Renewal List" />
+          )
         }
       />
 
@@ -510,20 +658,60 @@ export default function Dashboard({ categories = [], onNew, onEdit, onSelect, on
         <StatsCard label="Overdue"        value={counts.expired}                    sub="Needs attention"  accent="#EF4444" />
       </div>
 
+      {/* ── Tabs ── */}
+      <div style={{ display: "flex", gap: 12, marginBottom: 16, borderBottom: "2px solid #F3F4F6" }}>
+        <button
+          onClick={() => { setTab("active"); setSearch(""); setStatusF("all"); setCatF("all"); }}
+          style={{
+            padding: "12px 20px",
+            border: "none",
+            background: "transparent",
+            fontSize: 14,
+            fontWeight: 600,
+            color: tab === "active" ? "#111" : "#9CA3AF",
+            cursor: "pointer",
+            borderBottom: tab === "active" ? `3px solid ${LIME}` : "none",
+            marginBottom: "-2px",
+          }}
+        >
+          📋 Active Renewals ({renewals.length})
+        </button>
+        <button
+          onClick={() => { setTab("archived"); setSearch(""); setStatusF("all"); setCatF("all"); }}
+          style={{
+            padding: "12px 20px",
+            border: "none",
+            background: "transparent",
+            fontSize: 14,
+            fontWeight: 600,
+            color: tab === "archived" ? "#111" : "#9CA3AF",
+            cursor: "pointer",
+            borderBottom: tab === "archived" ? `3px solid ${LIME}` : "none",
+            marginBottom: "-2px",
+          }}
+        >
+          📦 Archive ({archived.length})
+        </button>
+      </div>
+
       <div style={{ background: "#fff", borderRadius: 12, padding: "14px 18px", boxShadow: "0 1px 3px rgba(0,0,0,0.06)", marginBottom: 16, display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
-        <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by name, vendor, person…" style={inputStyle} />
-        <select value={statusF} onChange={(e) => setStatusF(e.target.value)} style={selectStyle}>
-          <option value="all">All Status</option>
-          <option value="active">Active</option>
-          <option value="expiring">Expiring Soon</option>
-          <option value="critical">Critical</option>
-          <option value="expired">Expired</option>
-        </select>
+        <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={tab === "archived" ? "Search by name, vendor..." : "Search by name, vendor, person…"} style={inputStyle} />
+        {tab === "active" && (
+          <>
+            <select value={statusF} onChange={(e) => setStatusF(e.target.value)} style={selectStyle}>
+              <option value="all">All Status</option>
+              <option value="active">Active</option>
+              <option value="expiring">Expiring Soon</option>
+              <option value="critical">Critical</option>
+              <option value="expired">Expired</option>
+            </select>
+          </>
+        )}
         <select value={catF} onChange={(e) => setCatF(e.target.value)} style={selectStyle}>
           <option value="all">All Categories</option>
           {categories.map((c) => <option key={c.id} value={c.name}>{c.name}</option>)}
         </select>
-        {(search || statusF !== "all" || catF !== "all") && (
+        {(search || (tab === "active" && statusF !== "all") || catF !== "all") && (
           <button onClick={() => { setSearch(""); setStatusF("all"); setCatF("all"); }} style={clearBtnStyle}>Clear</button>
         )}
       </div>
@@ -534,14 +722,22 @@ export default function Dashboard({ categories = [], onNew, onEdit, onSelect, on
             <thead>
               <tr style={{ background: "#F9FAFB" }}>
                 <TH>ID</TH><TH>Item</TH><TH>Category</TH><TH>Vendor</TH>
-                <TH>Responsible</TH><TH>Renewal Date</TH><TH>Status</TH><TH></TH>
+                {tab === "active" ? (
+                  <>
+                    <TH>Responsible</TH><TH>Renewal Date</TH><TH>Status</TH><TH></TH>
+                  </>
+                ) : (
+                  <>
+                    <TH>Closed Date</TH><TH></TH>
+                  </>
+                )}
               </tr>
             </thead>
             <tbody>
               {visible.map((r) => (
                 <tr
                   key={r.id}
-                  onClick={() => setSelected(r)}  // ← open modal on row click
+                  onClick={() => setViewMode(r)}
                   style={{ borderBottom: "1px solid #F9FAFB", cursor: "pointer", transition: "background 0.1s" }}
                   onMouseEnter={(e) => (e.currentTarget.style.background = "#FAFAFA")}
                   onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
@@ -553,23 +749,29 @@ export default function Dashboard({ categories = [], onNew, onEdit, onSelect, on
                   </td>
                   <td style={{ padding: "13px 16px", fontSize: 13, color: "#374151" }}>{r.category}</td>
                   <td style={{ padding: "13px 16px", fontSize: 13, color: "#374151" }}>{r.vendor}</td>
-                  <td style={{ padding: "13px 16px", fontSize: 13, color: "#374151" }}>{r.responsible}</td>
-                  <td style={{ padding: "13px 16px" }}>
-                    <div style={{ fontSize: 13, color: "#374151" }}>{fmtDate(r.endDate)}</div>
-                    <DaysChip endDate={r.endDate} />
-                  </td>
-                  {/* <td style={{ padding: "13px 16px", fontSize: 13, fontWeight: 600, color: "#374151", whiteSpace: "nowrap" }}>
-                    {r.currency} {Number(r.cost).toLocaleString("en-IN")}
-                  </td> */}
-                  <td style={{ padding: "13px 16px" }}><StatusBadge status={getStatus(r.endDate)} /></td>
-                  <td style={{ padding: "13px 16px" }}>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setSelected(r); }}
-                      style={{ background: LIME_PALE, color: "#4B5320", border: `1px solid ${LIME}`, borderRadius: 7, padding: "5px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}
-                    >
-                      Edit
-                    </button>
-                  </td>
+                  {tab === "active" ? (
+                    <>
+                      <td style={{ padding: "13px 16px", fontSize: 13, color: "#374151" }}>{r.responsible}</td>
+                      <td style={{ padding: "13px 16px" }}>
+                        <div style={{ fontSize: 13, color: "#374151" }}>{fmtDate(r.endDate)}</div>
+                        <DaysChip endDate={r.endDate} />
+                      </td>
+                      <td style={{ padding: "13px 16px" }}><StatusBadge status={getStatus(r.endDate)} /></td>
+                      <td style={{ padding: "13px 16px" }}>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setEditMode(r); }}
+                          style={{ background: LIME_PALE, color: "#4B5320", border: `1px solid ${LIME}`, borderRadius: 7, padding: "5px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}
+                        >
+                          Edit
+                        </button>
+                      </td>
+                    </>
+                  ) : (
+                    <>
+                      <td style={{ padding: "13px 16px", fontSize: 13, color: "#374151" }}>{fmtDate(r.closedAt)}</td>
+                      <td></td>
+                    </>
+                  )}
                 </tr>
               ))}
             </tbody>
@@ -584,13 +786,20 @@ export default function Dashboard({ categories = [], onNew, onEdit, onSelect, on
         </div>
       </div>
 
-      {/* ── Edit Modal ── */}
-      {selected && (
+      {/* ── Modals ── */}
+      {viewMode && (
+        <ViewModal
+          renewal={viewMode}
+          onClose={() => setViewMode(null)}
+          onEdit={() => { setEditMode(viewMode); setViewMode(null); }}
+        />
+      )}
+      {editMode && (
         <EditModal
-          renewal={selected}
+          renewal={editMode}
           categories={categories}
-          onClose={() => setSelected(null)}
-          onSaved={() => { fetchRenewals(); setSelected(null); }}
+          onClose={() => setEditMode(null)}
+          onSaved={() => { fetchRenewals(); setEditMode(null); }}
         />
       )}
     </div>

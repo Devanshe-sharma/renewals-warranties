@@ -73,7 +73,7 @@ export default function UpdateForm({ onSave, onCancel }) {
   };
 
   useEffect(() => {
-    fetch(`${process.env.REACT_APP_API_URL}/api/renewals?active=true`)
+    fetch(`${process.env.REACT_APP_API_URL}/api/renewal-events/items`)
       .then((r) => r.json())
       .then((res) => { if (res.success) setItems(res.data); })
       .catch((err) => console.error("Items fetch error:", err));
