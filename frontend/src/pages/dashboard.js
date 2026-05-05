@@ -597,7 +597,28 @@ export default function Dashboard({ categories = [], onNew, onEdit, onSelect, on
 
       const arRes = await fetch(`${API}/api/renewals/archived/list`);
       const arData = await arRes.json();
-      if (arData.success) setArchived(arData.data.map(mapRenewal));
+      let archivedItems = [];
+      if (arData.success) archivedItems = arData.data.map(mapRenewal);
+
+      const evRes = await fetch(`${API}/api/renewal-events?status=Closed`);
+      const evData = await evRes.json();
+      if (evData.success) {
+        const closedEvents = evData.data.map(e => ({
+          id:                 e.item_id,
+          itemName:           e.item_name            || "",
+          category:           e.category             || "",
+          subcategory:        e.subcategory          || "",
+          vendor:             "",
+          responsible:        e.renewed_by           || "",
+          closedAt:           e.createdAt            || null,
+          isClosed:           true,
+          eventId:            e.event_id,
+          isRenewalEvent:     true,
+        }));
+        archivedItems = [...archivedItems, ...closedEvents];
+      }
+
+      setArchived(archivedItems.sort((a, b) => new Date(b.closedAt) - new Date(a.closedAt)));
     } catch (err) {
       console.error("Failed to fetch renewals:", err);
     } finally {
@@ -728,7 +749,7 @@ export default function Dashboard({ categories = [], onNew, onEdit, onSelect, on
                   </>
                 ) : (
                   <>
-                    <TH>Closed Date</TH><TH></TH>
+                    <TH>Responsible</TH><TH>Closed Date</TH><TH></TH>
                   </>
                 )}
               </tr>
@@ -768,6 +789,7 @@ export default function Dashboard({ categories = [], onNew, onEdit, onSelect, on
                     </>
                   ) : (
                     <>
+                      <td style={{ padding: "13px 16px", fontSize: 13, color: "#374151" }}>{r.responsible}</td>
                       <td style={{ padding: "13px 16px", fontSize: 13, color: "#374151" }}>{fmtDate(r.closedAt)}</td>
                       <td></td>
                     </>

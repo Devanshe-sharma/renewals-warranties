@@ -115,7 +115,7 @@ router.post('/', async (req, res) => {
 // ────────────────────────────────────────────────────────
 router.get('/', async (req, res) => {
   try {
-    const filter = { is_closed: false };
+    const filter = { is_closed: { $ne: true } };
     if (req.query.active)     filter.active     = req.query.active === 'true';
     if (req.query.category)   filter.category   = req.query.category;
     if (req.query.department) filter.department = req.query.department;
@@ -135,7 +135,7 @@ router.get('/', async (req, res) => {
 // ────────────────────────────────────────────────────────
 router.get('/archived/list', async (req, res) => {
   try {
-    const archived = await Newrenewal.find({ is_closed: true }).sort({ closed_at: -1 }).lean();
+    const archived = await Newrenewal.find({ is_closed: true }).sort({ closed_at: -1, createdAt: -1 }).lean();
     res.json({ success: true, count: archived.length, data: archived });
 
   } catch (err) {

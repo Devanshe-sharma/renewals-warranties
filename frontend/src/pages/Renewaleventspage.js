@@ -144,6 +144,7 @@ export default function RenewalEventsPage({ onRecord, onBack }) {
   const [decisionF, setDecisionF] = useState("all"); // all | Yes | No
   const [catF,     setCatF]     = useState("all");
   const [selected, setSelected] = useState(null); // for drawer
+  const [tab,      setTab]      = useState("active"); // "active" or "archive"
 
   // ── Fetch all renewal events ──────────────────────────
   const fetchEvents = useCallback(async () => {
@@ -162,22 +163,25 @@ export default function RenewalEventsPage({ onRecord, onBack }) {
   useEffect(() => { fetchEvents(); }, [fetchEvents]);
 
   // ── Stats ─────────────────────────────────────────────
-  const totalRenewed = events.filter((e) => e.renewal_required === "Yes").length;
-  const totalClosed  = events.filter((e) => e.renewal_required === "No").length;
+  const renewedEvents = events.filter((e) => e.renewal_required === "Yes");
+  const closedEvents  = events.filter((e) => e.renewal_required === "No");
+  const totalRenewed = renewedEvents.length;
+  const totalClosed  = closedEvents.length;
   const uniqueItems  = new Set(events.map((e) => e.item_id)).size;
 
   // ── Unique categories for filter ──────────────────────
   const cats = [...new Set(events.map((e) => e.category).filter(Boolean))].sort();
 
   // ── Filtered rows ─────────────────────────────────────
-  const visible = events.filter((e) => {
+  const tabEvents = tab === "archive" ? closedEvents : renewedEvents;
+  const visible = tabEvents.filter((e) => {
     const q = search.toLowerCase();
     return (
       (!q ||
         (e.item_name  || "").toLowerCase().includes(q) ||
         (e.event_id   || "").toLowerCase().includes(q) ||
         (e.renewed_by || "").toLowerCase().includes(q)) &&
-      (decisionF === "all" || e.renewal_required === decisionF) &&
+      (tab === "archive" || decisionF === "all" || e.renewal_required === decisionF) &&
       (catF      === "all" || e.category         === catF)
     );
   });
@@ -212,24 +216,61 @@ export default function RenewalEventsPage({ onRecord, onBack }) {
         <StatsCard label="Unique Items"     value={uniqueItems}    accent="#6366F1"   />
       </div>
 
+      {/* ── Tabs ── */}
+      <div style={{ display: "flex", gap: 12, marginBottom: 16, borderBottom: "2px solid #F3F4F6" }}>
+        <button
+          onClick={() => { setTab("active"); setSearch(""); setDecisionF("all"); setCatF("all"); }}
+          style={{
+            padding: "12px 20px",
+            border: "none",
+            background: "transparent",
+            fontSize: 14,
+            fontWeight: 600,
+            color: tab === "active" ? "#111" : "#9CA3AF",
+            cursor: "pointer",
+            borderBottom: tab === "active" ? `3px solid ${LIME}` : "none",
+            marginBottom: "-2px",
+          }}
+        >
+          ✅ Renewed ({renewedEvents.length})
+        </button>
+        <button
+          onClick={() => { setTab("archive"); setSearch(""); setDecisionF("all"); setCatF("all"); }}
+          style={{
+            padding: "12px 20px",
+            border: "none",
+            background: "transparent",
+            fontSize: 14,
+            fontWeight: 600,
+            color: tab === "archive" ? "#111" : "#9CA3AF",
+            cursor: "pointer",
+            borderBottom: tab === "archive" ? `3px solid ${LIME}` : "none",
+            marginBottom: "-2px",
+          }}
+        >
+          📦 Archive ({closedEvents.length})
+        </button>
+      </div>
+
       {/* ── Filters ── */}
       <div style={{ background: "#fff", borderRadius: 12, padding: "14px 18px", boxShadow: "0 1px 3px rgba(0,0,0,0.06)", marginBottom: 16, display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search by item name, event ID, renewed by…"
+          placeholder={tab === "archive" ? "Search by item name, event ID…" : "Search by item name, event ID, renewed by…"}
           style={inputStyle}
         />
-        <select value={decisionF} onChange={(e) => setDecisionF(e.target.value)} style={selectStyle}>
-          <option value="all">All Decisions</option>
-          <option value="Yes">Renewed</option>
-          <option value="No">Closed</option>
-        </select>
+        {tab === "active" && (
+          <select value={decisionF} onChange={(e) => setDecisionF(e.target.value)} style={selectStyle}>
+            <option value="all">All Decisions</option>
+            <option value="Yes">Renewed</option>
+          </select>
+        )}
         <select value={catF} onChange={(e) => setCatF(e.target.value)} style={selectStyle}>
           <option value="all">All Categories</option>
           {cats.map((c) => <option key={c} value={c}>{c}</option>)}
         </select>
-        {(search || decisionF !== "all" || catF !== "all") && (
+        {(search || (tab === "active" && decisionF !== "all") || catF !== "all") && (
           <button onClick={() => { setSearch(""); setDecisionF("all"); setCatF("all"); }} style={clearBtnStyle}>
             Clear
           </button>
@@ -245,7 +286,7 @@ export default function RenewalEventsPage({ onRecord, onBack }) {
                 <TH>Event ID</TH>
                 <TH>Item Name</TH>
                 <TH>Category</TH>
-                <TH>Decision</TH>
+                {tab === "active" && <TH>Decision</TH>}
                 <TH>Prev Expiry</TH>
                 <TH>New Renewal Date</TH>
                 <TH>New Expiry</TH>
@@ -274,9 +315,11 @@ export default function RenewalEventsPage({ onRecord, onBack }) {
                     <div>{ev.category}</div>
                     {ev.subcategory && <div style={{ fontSize: 11, color: "#9CA3AF", marginTop: 1 }}>{ev.subcategory}</div>}
                   </td>
-                  <td style={{ padding: "13px 16px" }}>
-                    <DecisionBadge value={ev.renewal_required} />
-                  </td>
+                  {tab === "active" && (
+                    <td style={{ padding: "13px 16px" }}>
+                      <DecisionBadge value={ev.renewal_required} />
+                    </td>
+                  )}
                   <td style={{ padding: "13px 16px", fontSize: 13, color: "#374151" }}>
                     {fmtDate(ev.prev_expiry_date)}
                   </td>
@@ -308,7 +351,7 @@ export default function RenewalEventsPage({ onRecord, onBack }) {
         )}
 
         <div style={{ padding: "12px 18px", borderTop: "1px solid #F3F4F6", color: "#9CA3AF", fontSize: 12 }}>
-          Showing {visible.length} of {events.length} events
+          Showing {visible.length} of {tab === "archive" ? totalClosed : totalRenewed} events
         </div>
       </div>
 

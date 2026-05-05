@@ -49,7 +49,7 @@ router.get('/next-id', async (req, res) => {
 router.get('/items', async (req, res) => {
   try {
     const items = await Newrenewal
-      .find({ active: true, is_closed: false })
+      .find({ active: true, is_closed: { $ne: true } })
       .select('item_id item_name category subcategory start_date frequency user_person user_department renewer_name emp_name emp_id')
       .sort({ item_name: 1 })
       .lean();
