@@ -320,9 +320,9 @@ export function CategoriesPage({ store }) {
               onClick={setAsAdmin}
               style={{
                 padding: "6px 12px",
-                background: isAdmin ? "#ADE80A" : "#F3F4F6",
+                background: isAdmin ? "#1976d2" : "#F3F4F6",
                 color: isAdmin ? "#000" : "#6B7280",
-                border: "1px solid " + (isAdmin ? "#ADE80A" : "#E5E7EB"),
+                border: "1px solid " + (isAdmin ? "#1976d2" : "#E5E7EB"),
                 borderRadius: 4,
                 fontSize: 12,
                 fontWeight: 600,
@@ -407,7 +407,7 @@ export function CategoriesPage({ store }) {
             onClick={handleAddCategory}
             style={{
               padding: "10px 16px",
-              background: "#ADE80A",
+              background: "#1976d2",
               color: "#000",
               border: "none",
               borderRadius: 8,
@@ -519,7 +519,7 @@ export function CategoriesPage({ store }) {
                     onClick={(e) => e.stopPropagation()}
                     style={{
                       padding: "6px 8px",
-                      border: "1px solid #ADE80A",
+                      border: "1px solid #1976d2",
                       borderRadius: 4,
                       fontSize: 14,
                       fontWeight: 600,
@@ -556,7 +556,7 @@ export function CategoriesPage({ store }) {
                       }}
                       style={{
                         padding: "6px 10px",
-                        background: "#ADE80A",
+                        background: "#1976d2",
                         color: "#000",
                         border: "none",
                         borderRadius: 4,
@@ -658,7 +658,7 @@ export function CategoriesPage({ store }) {
                           }}
                           style={{
                             padding: "4px 6px",
-                            border: "1px solid #ADE80A",
+                            border: "1px solid #1976d2",
                             borderRadius: 4,
                             fontSize: 13,
                             flex: 1,
@@ -685,7 +685,7 @@ export function CategoriesPage({ store }) {
                               onClick={() => handleSaveEdit(cat.id, sub.id)}
                               style={{
                                 padding: "4px 8px",
-                                background: "#ADE80A",
+                                background: "#1976d2",
                                 color: "#000",
                                 border: "none",
                                 borderRadius: 4,
@@ -773,7 +773,7 @@ export function CategoriesPage({ store }) {
                       onClick={() => handleAddSubcategory(cat.id)}
                       style={{
                         padding: "6px 12px",
-                        background: "#ADE80A",
+                        background: "#1976d2",
                         color: "#000",
                         border: "none",
                         borderRadius: 6,

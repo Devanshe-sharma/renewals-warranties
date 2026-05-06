@@ -1,6 +1,6 @@
 import React from "react";
 
-const LIME = "#ADE80A";
+const LIME = "#1976d2";
 
 /**
  * Navbar

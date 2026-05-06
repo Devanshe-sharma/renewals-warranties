@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import Navbar, { NavbarButton } from "../components/navbar";
 
 const API  = process.env.REACT_APP_API_URL;
-const LIME = "#ADE80A";
+const LIME = "#1976d2";
 
 // ── Helpers ───────────────────────────────────────────────
 const fmtDate = (d) =>

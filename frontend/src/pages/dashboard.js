@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import Navbar, { NavbarButton } from "../components/navbar";
 
 const API       = process.env.REACT_APP_API_URL;
-const LIME      = "#ADE80A";
+const LIME      = "#1976d2";
 const LIME_PALE = "#F4FFD6";
 
 const FREQ_MONTHS = { Monthly: 1, Quarterly: 3, "Half Yearly": 6, Annually: 12 };
@@ -642,7 +642,7 @@ export default function Dashboard({ categories = [], onNew, onEdit, onSelect, on
   if (loading) {
     return (
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "60vh", flexDirection: "column", gap: 16 }}>
-        <div style={{ width: 36, height: 36, border: "3px solid #E5E7EB", borderTop: "3px solid #ADE80A", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
+        <div style={{ width: 36, height: 36, border: "3px solid #E5E7EB", borderTop: "3px solid #1976d2", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
         <span style={{ color: "#9CA3AF", fontSize: 14 }}>Loading renewals...</span>
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>

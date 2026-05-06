@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import Navbar from "../components/navbar";
 
-const LIME = "#ADE80A";
+const LIME = "#1976d2";
 const FREQ_MONTHS = { Monthly: 1, Quarterly: 3, "Half Yearly": 6, Annually: 12 };
 const DEFAULT_REMIND = {
   Annually:      { r1: 30, r2: 10, rf: 1 },
@@ -460,7 +460,7 @@ const cancelBtnStyle = {
 
 const saveBtnStyle = {
   padding: "11px 28px", borderRadius: 10,
-  border: "none", background: "#ADE80A", color: "#000",
+  border: "none", background: "#1976d2", color: "#000",
   fontSize: 14, fontWeight: 700, cursor: "pointer",
   fontFamily: "inherit", display: "flex", alignItems: "center", gap: 8,
 };

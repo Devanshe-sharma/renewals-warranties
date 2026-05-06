@@ -21,15 +21,9 @@ function AppContent() {
 
   return (
     <>
-      <Sidebar onNav={(id) => {
-        if (id === "dashboard") navigate("/");
-        if (id === "update") navigate("/updaterenewal");
-        if (id === "categories") navigate("/categories");
-      }}
-      activeNav={window.location.pathname === "/" ? "dashboard" : window.location.pathname === "/updaterenewal" ? "update" : window.location.pathname === "/categories" ? "categories" : "dashboard"}
-      />
+      <Sidebar />
 
-      <main style={{ marginLeft: 220, padding: "32px 36px", minHeight: "100vh", boxSizing: "border-box" }}>
+      <main style={{ marginLeft: 260, padding: "32px 36px", minHeight: "100vh", boxSizing: "border-box" }}>
         <Routes>
           <Route path="/" element={<Dashboard categories={catStore.categories} onNew={() => navigate("/new")} onNavigateUpdateForm={() => navigate("/updaterenewal")} />} />
           <Route path="/new" element={<NewForm categories={catStore.categories} onSave={(data) => { showToast(`"${data.item_name}" created!`); navigate("/"); }} onCancel={() => navigate("/")} />} />
