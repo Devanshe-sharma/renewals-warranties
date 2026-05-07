@@ -740,7 +740,7 @@ export default function Dashboard({ categories = [], onNew, onEdit, onSelect, on
         actions={
           tab === "active" ? (
             <div style={{ display: "flex", gap: 10 }}>
-              <NavbarButton onClick={onNavigateUpdateForm} label="✏️ Update Renewal" variant="secondary" />
+              {/* <NavbarButton onClick={onNavigateUpdateForm} label="✏️ Update Renewal" variant="secondary" /> */}
               <NavbarButton onClick={onNew} icon="+" label="Create Renewal List" />
             </div>
           ) : (
@@ -807,9 +807,9 @@ export default function Dashboard({ categories = [], onNew, onEdit, onSelect, on
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
               <tr style={{ background: "#F9FAFB" }}>
-                <TH>ID</TH><TH>Item</TH><TH>Category</TH><TH>Vendor</TH>
+                <TH>ID Item</TH><TH>Item</TH><TH>Category</TH><TH>Vendor</TH>
                 {tab === "active" ? (
-                  <><TH>Responsible</TH><TH>End Date</TH><TH>Status</TH><TH></TH></>
+                  <><TH>Renewer</TH><TH>Service start date</TH><TH>Status</TH><TH>Action</TH></>
                 ) : (
                   <><TH>Responsible</TH><TH>Closed On</TH><TH></TH></>
                 )}
