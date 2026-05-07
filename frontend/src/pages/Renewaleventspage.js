@@ -315,26 +315,27 @@ export default function RenewalEventsPage({ onRecord, onBack }) {
   }, {});
 
   // ── Filter events ─────────────────────────────────────
-  const visibleEvents = events.filter((e) => {
-    const q = search.toLowerCase();
-    return (
-      (!q ||
-        (e.item_name  || "").toLowerCase().includes(q) ||
-        (e.event_id   || "").toLowerCase().includes(q) ||
-        (e.renewed_by || "").toLowerCase().includes(q)) &&
-      (statusF === "all" || computeEventStatus(e) === statusF) &&
-      (catF   === "all" || e.category === catF) &&
-      (employeeF === "all" || (e.renewed_by || "").toLowerCase().includes(employeeF.toLowerCase()))
-    );
-  });
+  // ── Replace visibleEvents filter ──────────────────────────
+const visibleEvents = events.filter((e) => {
+  const q = search.toLowerCase();
+  return (
+    (!q ||
+      (e.item_name  || "").toLowerCase().includes(q) ||
+      (e.event_id   || "").toLowerCase().includes(q) ||
+      (e.user_person || "").toLowerCase().includes(q)) &&
+    (statusF   === "all" || computeEventStatus(e) === statusF) &&
+    (catF      === "all" || e.category === catF) &&
+    (employeeF === "all" || (e.user_person || "") === employeeF)
+  );
+});
 
   // ── Filter archived ───────────────────────────────────
   const visibleArchived = archived.filter((r) => {
     const q = search.toLowerCase();
     return !q ||
-      (r.itemName   || "").toLowerCase().includes(q) ||
+      (r.item_name   || "").toLowerCase().includes(q) ||
       (r.id         || "").toLowerCase().includes(q) ||
-      (r.department || "").toLowerCase().includes(q);
+      (r.user_person || "").toLowerCase().includes(q);
   });
 
   // ── Tab switcher ──────────────────────────────────────
@@ -412,8 +413,8 @@ export default function RenewalEventsPage({ onRecord, onBack }) {
             </select>
             <select value={employeeF} onChange={(e) => setEmployeeF(e.target.value)} style={selectStyle}>
               <option value="all">All Users</option>
-              {[...new Set(events)].filter(e => e.renewed_by).map(e => e.renewed_by).filter((v, i, arr) => arr.indexOf(v) === i).sort().map(employee => (
-                <option key={employee} value={employee}>{employee}</option>
+              {[...new Set(events.map(e => e.user_person).filter(Boolean))].sort().map(user => (
+                <option key={user} value={user}>{user}</option>
               ))}
             </select>
           </>
@@ -432,7 +433,7 @@ export default function RenewalEventsPage({ onRecord, onBack }) {
                 <tr style={{ background: "#F9FAFB" }}>
                   <TH>Event ID</TH><TH>Item Name</TH><TH>Category</TH>
                   <TH>Prev Expiry</TH><TH>New Renewal Date</TH>
-                  <TH>New Expiry</TH><TH>Amount</TH><TH>Renewed By</TH><TH>Status</TH><TH>Recorded On</TH>
+                  <TH>New Expiry</TH><TH>Amount</TH><TH>User</TH><TH>Status</TH><TH>Recorded On</TH>
                 </tr>
               </thead>
               <tbody>

@@ -674,6 +674,7 @@ export default function Dashboard({ categories = [], onNew, onEdit, onSelect, on
   const [search,          setSearch]          = useState("");
   const [statusF,         setStatusF]         = useState("all");
   const [catF,            setCatF]            = useState("all");
+  const [employeeF,        setEmployeeF]        = useState("all");
   const [historyMode,     setHistoryMode]     = useState(null);
   const [editMode,        setEditMode]        = useState(null);
   const [tab,             setTab]             = useState("active");
@@ -789,8 +790,14 @@ export default function Dashboard({ categories = [], onNew, onEdit, onSelect, on
           <option value="all">All Categories</option>
           {categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
         </select>
-        {(search || statusF !== "all" || catF !== "all") && (
-          <button onClick={() => { setSearch(""); setStatusF("all"); setCatF("all"); }} style={clearBtnStyle}>Clear</button>
+        <select value={employeeF} onChange={e => setEmployeeF(e.target.value)} style={selectStyle}>
+          <option value="all">All Users</option>
+          {[...new Set([...renewals, ...archived])].filter(r => r.empName).map(r => r.empName).filter((v, i, arr) => arr.indexOf(v) === i).sort().map(employee => (
+            <option key={employee} value={employee}>{employee}</option>
+          ))}
+        </select>
+        {(search || statusF !== "all" || catF !== "all" || employeeF !== "all") && (
+          <button onClick={() => { setSearch(""); setStatusF("all"); setCatF("all"); setEmployeeF("all"); }} style={clearBtnStyle}>Clear</button>
         )}
       </div>
 

@@ -41,8 +41,18 @@ export default function UpdateForm({ onSave, onCancel }) {
   const [nextId,    setNextId]    = useState("");   // preview event_id
   const [loading,   setLoading]   = useState(false);
   const [employees, setEmployees] = useState([]);   // for user details section
+  const [search, setSearch] = useState("");
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
+
+  // ── Filter items ─────────────────────────────
+  const visibleItems = items.filter((item) => {
+    const q = search.toLowerCase();
+    return !q ||
+      (item.item_name || "").toLowerCase().includes(q) ||
+      (item.item_id || "").toLowerCase().includes(q)||
+      (item.category || "").toLowerCase().includes(q);
+  });
 
   // ── Fetch items for dropdown ──────────────────────────
   const fetchItems = async () => {
@@ -56,116 +66,142 @@ export default function UpdateForm({ onSave, onCancel }) {
   };
 
   // ── Fetch item list for dropdown ──────────────────────
-  const handleEmployeeSelect = (id) => {
-    const emp = employees.find(e => e._id === id);
-    if (!emp) {
-      setForm(f => ({
-        ...f,
-        selectedEmployeeId: "",
-        empName: "", empId: "", department: "",
-        designation: "", email: "", reportingManager: "",
-        user_person: "", user_department: "",
-      }));
-      return;
-    }
+ 
 
-    setForm(f => ({
-      ...f,
-      selectedEmployeeId: id,
-      empName:          emp.Emp_name              || "",
-      empId:            String(emp.Emp_id)         || "",
-      department:       emp.Department             || "",
-      designation:      emp.Designation            || "",
-      email:            emp["desig Email Id"]      || "",
-      reportingManager: emp["Reporting Manager"]   || "",
-      user_person:      emp.Emp_name               || "",
-      user_department:  emp.Department             || "",
-    }));
-  };
 
-  useEffect(() => {
-    fetchItems();
 
-    fetch(`${process.env.REACT_APP_API_URL}/api/renewal-events/next-id`)
-      .then((r) => r.json())
-      .then((res) => { if (res.success) setNextId(res.event_id); })
-      .catch((err) => console.error("Next ID fetch error:", err));
+useEffect(() => {
+  fetchItems();
 
-    // ── Fetch employees for user details ──────────────────
-    fetch(`${process.env.REACT_APP_API_URL}/api/employee`)
-      .then(r => r.json())
-      .then(data => {
-        console.log("Employees loaded:", data.length);
-        setEmployees(data);
-        // Set admin renewer details from employees
-        const admin = data.find((emp) =>
-          (emp.Department || "").trim().toLowerCase().includes("admin") &&
-          ((emp["Department Head"] || "").trim() || (emp["Dept Head Email"] || "").trim())
-        );
-        if (admin) {
-          setForm(f => ({
-            ...f,
-            renewerName: f.renewerName || admin["Department Head"] || admin.Emp_name || "",
-            renewerDepartment: f.renewerDepartment || "Admin",
-            renewerEmail: f.renewerEmail || admin["Dept Head Email"] || admin["desig Email Id"] || "",
-          }));
-        }
-      })
-      .catch(err => console.error("Employee fetch error:", err));
-  }, []);
+  fetch(`${process.env.REACT_APP_API_URL}/api/renewal-events/next-id`)
+    .then((r) => r.json())
+    .then((res) => {
+      if (res.success) setNextId(res.event_id);
+    })
+    .catch((err) => console.error("Next ID fetch error:", err));
+
+  fetch(`${process.env.REACT_APP_API_URL}/api/employee`)
+    .then(r => r.json())
+    .then(result => {
+      console.log("EMPLOYEE API:", result);
+
+      const employeeList = result.data || result || [];
+
+      console.log("Employees loaded:", employeeList.length);
+
+      setEmployees(employeeList);
+
+      const admin = employeeList.find((emp) =>
+        (emp.Department || "").trim().toLowerCase().includes("admin") &&
+        (
+          (emp["Department Head"] || "").trim() ||
+          (emp["Dept Head Email"] || "").trim()
+        )
+      );
+
+      if (admin) {
+        setForm(f => ({
+          ...f,
+          renewerName:
+            f.renewerName ||
+            admin["Department Head"] ||
+            admin.Emp_name ||
+            "",
+
+          renewerDepartment:
+            f.renewerDepartment || "Admin",
+
+          renewerEmail:
+            f.renewerEmail ||
+            admin["Dept Head Email"] ||
+            admin["desig Email Id"] ||
+            "",
+        }));
+      }
+    })
+    .catch(err => console.error("Employee fetch error:", err));
+
+}, []);
 
   // ── Item selection → autofill from linked renewal ────
-  const handleItemSelect = (item_id) => {
-    const item = items.find((i) => i.item_id === item_id);
-    if (!item) {
-      const admin = employees.find((emp) =>
-        (emp.Department || "").trim().toLowerCase().includes("admin") &&
-        ((emp["Department Head"] || "").trim() || (emp["Dept Head Email"] || "").trim())
-      );
-      setForm({
-        ...BLANK,
-        renewerName: admin?.["Department Head"] || admin?.Emp_name || "",
-        renewerDepartment: admin ? "Admin" : "",
-        renewerEmail: admin?.["Dept Head Email"] || admin?.["desig Email Id"] || "",
-      });
-      return;
-    }
+  // ── 1. handleItemSelect ───────────────────────────────────
+const handleItemSelect = (item_id) => {
+  const item = items.find((i) => i.item_id === item_id);
 
-    // Calculate previous expiry = start_date + frequency
-    const prevStart  = item.start_date ? new Date(item.start_date) : null;
-    const months     = FREQ_MONTHS[item.frequency] || 12;
-    const prevExpiry = prevStart ? addMonths(prevStart, months) : null;
+  if (!item) {
+    const admin = employees.find((emp) =>
+      (emp.Department || "").trim().toLowerCase().includes("admin") &&
+      ((emp["Department Head"] || "").trim() || (emp["Dept Head Email"] || "").trim())
+    );
+    setForm({
+      ...BLANK,
+      renewerName:       admin?.["Department Head"] || admin?.Emp_name || "",
+      renewerDepartment: "Admin",
+      renewerEmail:      admin?.["Dept Head Email"] || admin?.["desig Email Id"] || "",
+    });
+    return;
+  }
 
-    setForm((f) => ({
+  const prevStart  = item.start_date ? new Date(item.start_date) : null;
+  const months     = FREQ_MONTHS[item.frequency] || 12;
+  const prevExpiry = prevStart ? addMonths(prevStart, months) : null;
+
+  setForm((f) => ({
+    ...f,
+    item_id:            item.item_id,
+    item_name:          item.item_name,
+    category:           item.category           || "",
+    subcategory:        item.subcategory        || "",
+    prev_start_date:    prevStart  ? fmtISO(prevStart)  : "",
+    prev_expiry_date:   prevExpiry ? fmtISO(prevExpiry) : "",
+    frequency:          item.frequency          || "",
+    renewerName:        item.renewer_name       || f.renewerName       || "",
+    renewerDepartment:  item.renewer_department || f.renewerDepartment || "Admin",
+    renewerEmail:       item.renewer_email      || f.renewerEmail      || "",
+    selectedEmployeeId: item.selected_employee_id || "",
+    empName:            item.emp_name           || "",
+    empId:              item.emp_id             || "",
+    department:         item.department         || "",
+    designation:        item.designation        || "",
+    email:              item.email              || "",
+    reportingManager:   item.reporting_manager  || "",
+    user_person:        item.user_person        || "",
+    user_department:    item.user_department    || "",
+    renewal_required:   "", new_renewal_date: "", new_expiry_date: "",
+    renewal_amount:     "", payment_mode: "",   card_holder: "",
+    invoice_ref:        "", proof_link: "",     remarks: "", email_sent: "No",
+  }));
+  setErrors({});
+};
+
+// ── 2. handleEmployeeSelect ───────────────────────────────
+const handleEmployeeSelect = (id) => {
+  const emp = employees.find((e) => e._id === id);
+
+  if (!emp) {
+    setForm(f => ({
       ...f,
-      item_id:          item.item_id,
-      item_name:        item.item_name,
-      category:         item.category    || "",
-      subcategory:      item.subcategory || "",
-      prev_start_date:  prevStart  ? fmtISO(prevStart)  : "",
-      prev_expiry_date: prevExpiry ? fmtISO(prevExpiry) : "",
-      frequency:        item.frequency   || "",
-      renewed_by:       item.renewer_name || item.emp_name || "",
-      renewerName:      item.renewer_name       || f.renewerName       || "",
-      renewerDepartment:item.renewer_department || f.renewerDepartment || "Admin",
-      renewerEmail:     item.renewer_email      || f.renewerEmail      || "",
-      selectedEmployeeId: item.selected_employee_id || "",
-      empName:          item.emp_name           || "",
-      empId:            item.emp_id             || "",
-      department:       item.department         || "",
-      designation:      item.designation        || "",
-      email:            item.email              || "",
-      reportingManager: item.reporting_manager  || "",
-      user_person:      item.user_person     || "",
-      user_department:  item.user_department || "",
-      // reset decision fields
-      renewal_required: "", new_renewal_date: "", new_expiry_date: "",
-      renewal_amount: "", payment_mode: "", card_holder: "",
-      invoice_ref: "", proof_link: "",
-      remarks: "", email_sent: "No",
+      selectedEmployeeId: "",
+      empName: "", empId: "", department: "",
+      designation: "", email: "", reportingManager: "",
+      user_person: "", user_department: "",
     }));
-    setErrors({});
-  };
+    return;
+  }
+
+  setForm(f => ({
+    ...f,
+    selectedEmployeeId: emp._id,
+    empName:          emp.Emp_name              || "",
+    empId:            String(emp.Emp_id)         || "",
+    department:       emp.Department             || "",
+    designation:      emp.Designation            || "",
+    email:            emp["desig Email Id"]      || "",
+    reportingManager: emp["Reporting Manager"]   || "",
+    user_person:      emp.Emp_name               || "",
+    user_department:  emp.Department             || "",
+  }));
+};
 
   // ── Employee select → autofill ────────────────────────
   // ── Auto-calculate new expiry ─────────────────────────
@@ -343,12 +379,26 @@ export default function UpdateForm({ onSave, onCancel }) {
         <Section title="User Details" emoji="👤">
           <div style={{ marginBottom: 20 }}>
             <Field label="Employee Name">
-              <select value={form.selectedEmployeeId} onChange={(e) => handleEmployeeSelect(e.target.value)} style={sel("")}>
-                <option value="">Select employee</option>
-                {employees.sort((a, b) => a.Emp_name.localeCompare(b.Emp_name)).map((em) => (
-                  <option key={em._id} value={em._id}>{em.Emp_name}</option>
-                ))}
-              </select>
+              <select
+                  value={form.selectedEmployeeId}
+                  onChange={(e) => handleEmployeeSelect(e.target.value)}
+                  style={sel("")}
+                >
+                  <option value="">Select employee</option>
+
+                  {employees
+                    .sort((a, b) =>
+                      (a.Emp_name || "").localeCompare(b.Emp_name || "")
+                    )
+                    .map((em) => (
+                      <option
+                        key={em._id || em.id || em.Emp_id}
+                        value={String(em._id || em.id || em.Emp_id)}
+                      >
+                        {em.Emp_name}
+                      </option>
+                    ))}
+                </select>
             </Field>
           </div>
 
@@ -477,7 +527,6 @@ export default function UpdateForm({ onSave, onCancel }) {
             {loading ? "Saving…" : "✅ Record Event"}
           </button>
         </div>
-
       </div>
     </div>
   );

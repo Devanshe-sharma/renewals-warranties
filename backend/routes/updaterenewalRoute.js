@@ -50,7 +50,13 @@ router.get('/items', async (req, res) => {
   try {
     const items = await Newrenewal
       .find({ active: true, is_closed: { $ne: true } })
-      .select('item_id item_name category subcategory start_date frequency user_person user_department renewer_name emp_name emp_id')
+      .select(`
+        item_id item_name category subcategory
+        start_date frequency
+        renewer_name renewer_department renewer_email
+        emp_name emp_id department designation email reporting_manager
+        selected_employee_id user_person user_department
+      `)
       .sort({ item_name: 1 })
       .lean();
 
@@ -59,7 +65,6 @@ router.get('/items', async (req, res) => {
     res.status(500).json({ success: false, message: err.message });
   }
 });
-
 // ────────────────────────────────────────────────────────
 // POST /api/renewal-events
 // Record a new renewal event
