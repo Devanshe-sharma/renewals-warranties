@@ -836,8 +836,8 @@ export default function Dashboard({ categories = [], onNew, onEdit, onSelect, on
                       <>
                         <td style={{ padding: "13px 16px", fontSize: 13, color: "#374151" }}>{r.responsible}</td>
                         <td style={{ padding: "13px 16px" }}>
-                          <div style={{ fontSize: 13, color: "#374151" }}>{fmtDate(r.endDate)}</div>
-                          {!latestEventMap[r.id] && <DaysChip endDate={r.endDate} />}
+                          <div style={{ fontSize: 13, color: "#374151" }}>{fmtDate(r.startDate)}</div>
+                          {!latestEventMap[r.id] && <DaysChip endDate={r.startDate} />}
                         </td>
                         <td style={{ padding: "13px 16px" }}><StatusBadge status={status} /></td>
                         <td style={{ padding: "13px 16px" }}>
