@@ -1,5 +1,6 @@
 import { useState, useContext } from "react";
 import { UserContext } from "../context/UserContext";
+import Navbar from "../components/navbar";
 
 // ────────────────────────────────────────────────────────
 // DEFAULT CATEGORIES SCHEMA
@@ -286,7 +287,14 @@ export function CategoriesPage({ store }) {
   };
 
   return (
-    <div style={{ maxWidth: 1000 }}>
+    <div style={{ paddingTop: 56 }}>
+      <Navbar
+        title="Categories"
+        subtitle="Manage categories and subcategories"
+        breadcrumb={[{ label: "Dashboard", onClick: () => {} }, { label: "Categories" }]}
+      />
+
+      <div style={{ maxWidth: 1000 }}>
       {/* Header with user info and role switcher */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 32 }}>
         <h1 style={{ fontSize: 28, fontWeight: 700, color: "#111827", margin: 0 }}>Categories</h1>
@@ -792,5 +800,6 @@ export function CategoriesPage({ store }) {
         ))}
       </div>
     </div>
+  </div>
   );
 }

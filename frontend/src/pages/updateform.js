@@ -20,7 +20,7 @@ const BLANK = {
   new_renewal_date: "", frequency: "", new_expiry_date: "",
   // payment
   renewal_amount: "", payment_mode: "", card_holder: "",
-  invoice_ref: "", renewed_by: "", next_due_date: "", proof_link: "",
+  invoice_ref: "", proof_link: "",
   // additional
   user_person: "", user_department: "", remarks: "", email_sent: "No",
   // renewer details
@@ -161,7 +161,7 @@ export default function UpdateForm({ onSave, onCancel }) {
       // reset decision fields
       renewal_required: "", new_renewal_date: "", new_expiry_date: "",
       renewal_amount: "", payment_mode: "", card_holder: "",
-      invoice_ref: "", next_due_date: "", proof_link: "",
+      invoice_ref: "", proof_link: "",
       remarks: "", email_sent: "No",
     }));
     setErrors({});
@@ -209,29 +209,35 @@ export default function UpdateForm({ onSave, onCancel }) {
 
   // ── Submit ────────────────────────────────────────────
   const handleSave = async () => {
-    if (!validate()) return;
-    setLoading(true);
-    try {
-      const res = await fetch(`${process.env.REACT_APP_API_URL}/api/renewal-events`, {
-        method:  "POST",
-        headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify(form),
-      });
-      const data = await res.json();
-      if (data.success) {
-        alert(`✅ Renewal event recorded — ID: ${data.data.event_id}`);
-        await fetchItems();
-        onSave(data.data);
-      } else {
-        alert(`❌ Error: ${data.message}`);
-      }
-    } catch (err) {
-      alert("❌ Failed to save. Check your connection.");
-      console.error(err);
-    } finally {
-      setLoading(false);
+  if (!validate()) return;
+  setLoading(true);
+  try {
+    const res  = await fetch(`${process.env.REACT_APP_API_URL}/api/renewal-events`, {
+      method:  "POST",
+      headers: { "Content-Type": "application/json" },
+      body:    JSON.stringify(form),
+    });
+    const data = await res.json();
+
+    if (!data.success) {
+      alert(`❌ Error: ${data.message}`);
+      return;
     }
-  };
+
+    const msg = form.renewal_required === "No"
+      ? `✅ Event recorded — ID: ${data.data.event_id}\n📦 Item moved to archive.`
+      : `✅ Event recorded — ID: ${data.data.event_id}`;
+
+    alert(msg);
+    onSave(data.data);
+
+  } catch (err) {
+    alert("❌ Failed to save. Check your connection.");
+    console.error(err);
+  } finally {
+    setLoading(false);
+  }
+};
 
   // ── Style helpers ─────────────────────────────────────
   const inp = (name, extra = {}) => ({
@@ -253,7 +259,7 @@ export default function UpdateForm({ onSave, onCancel }) {
   const isWarranty        = form.category === "Warranty";
 
   return (
-    <div>
+    <div style={{ paddingTop: 56 }}>
       <Navbar
         title="Record Renewal Event"
         subtitle="Log a renewal event against an existing renewal item"
@@ -339,7 +345,7 @@ export default function UpdateForm({ onSave, onCancel }) {
             <Field label="Employee Name">
               <select value={form.selectedEmployeeId} onChange={(e) => handleEmployeeSelect(e.target.value)} style={sel("")}>
                 <option value="">Select employee</option>
-                {employees.map((em) => (
+                {employees.sort((a, b) => a.Emp_name.localeCompare(b.Emp_name)).map((em) => (
                   <option key={em._id} value={em._id}>{em.Emp_name}</option>
                 ))}
               </select>
@@ -413,12 +419,6 @@ export default function UpdateForm({ onSave, onCancel }) {
               <Field label="Invoice / Ref No">
                 <input value={form.invoice_ref} onChange={(e) => set("invoice_ref", e.target.value)} style={inp("")} placeholder="INV-XXXX" />
               </Field>
-              <Field label="Renewed By">
-                <input value={form.renewed_by} onChange={(e) => set("renewed_by", e.target.value)} style={inp("")} placeholder="Auto-filled from renewal" />
-              </Field>
-              <Field label="Next Renewal Due Date">
-                <input type="date" value={form.next_due_date} onChange={(e) => set("next_due_date", e.target.value)} style={inp("")} />
-              </Field>
               <Field label="Proof Link">
                 <input type="url" value={form.proof_link} onChange={(e) => set("proof_link", e.target.value)} style={inp("")} placeholder="https://drive.google.com/..." />
               </Field>
@@ -459,12 +459,12 @@ export default function UpdateForm({ onSave, onCancel }) {
 
         {/* ── If Renewal Required = No, show a simple closed notice ── */}
         {form.renewal_required === "No" && (
-          <div style={{ background: "#FEF3C7", border: "1px solid #FCD34D", borderRadius: 12, padding: "20px 24px", display: "flex", alignItems: "center", gap: 12 }}>
-            <span style={{ fontSize: 24 }}>⚠️</span>
+          <div style={{ background: "#1976d2", border: "1px solid #1565C0", borderRadius: 12, padding: "20px 24px", display: "flex", alignItems: "center", gap: 12 }}>
+            <span style={{ fontSize: 24, color: "#fff" }}>⚠️</span>
             <div>
-              <div style={{ fontWeight: 700, color: "#92400E", fontSize: 14 }}>Marked as Closed</div>
-              <div style={{ color: "#B45309", fontSize: 13, marginTop: 3 }}>
-                This renewal event will be recorded as <strong>Closed</strong> with no new renewal details.
+              <div style={{ fontWeight: 700, color: "#fff", fontSize: 14 }}>Marked as Closed</div>
+              <div style={{ color: "rgba(255,255,255,0.9)", fontSize: 13, marginTop: 3 }}>
+                This renewal event will be recorded as <strong style={{ color: "#fff" }}>Closed</strong> with no new renewal details.
               </div>
             </div>
           </div>

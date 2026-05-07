@@ -109,8 +109,7 @@ router.post('/', async (req, res) => {
       payment_mode:   b.payment_mode   || '',
       card_holder:    b.card_holder    || '',
       invoice_ref:    b.invoice_ref    || '',
-      renewed_by:     b.renewed_by     || linkedItem.renewer_name || linkedItem.emp_name || '',
-      next_due_date:  b.next_due_date  ? new Date(b.next_due_date) : null,
+      renewed_by:     linkedItem.renewer_name || linkedItem.emp_name || '',
       proof_link:     b.proof_link     || '',
 
       // Additional

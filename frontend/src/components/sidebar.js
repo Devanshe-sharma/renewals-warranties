@@ -1,13 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import {
   Drawer, List, ListItemButton, ListItemIcon, ListItemText,
   Box, Collapse, Avatar, Typography,
 } from '@mui/material';
 import {
   Dashboard as DashboardIcon,
-  Settings as SettingsIcon,
   Edit as EditIcon,
   Category as CategoryIcon,
+  Rule as RuleIcon,
   ExpandLess as ExpandLessIcon,
   ExpandMore as ExpandMoreIcon,
 } from '@mui/icons-material';
@@ -18,22 +18,16 @@ const BRAND_BLUE = '#1976d2';
 
 export default function Sidebar() {
   const location = useLocation();
-  const [openCategories, setOpenCategories] = useState(false);
 
   const isActive = (path) => {
     return location.pathname === path || location.pathname.startsWith(path + '?');
   };
 
-  // Auto-expand parent menus if any sub-item is active
-  useEffect(() => {
-    const categoriesActive = ['/categories'].some(path => isActive(path));
-    setOpenCategories(categoriesActive);
-  }, [location.pathname]);
-
   const menuItems = [
     { to: '/', text: 'Renewal List', icon: <DashboardIcon /> },
     { to: '/updaterenewal', text: 'Update Renewal List', icon: <EditIcon /> },
     { to: '/categories', text: 'Categories', icon: <CategoryIcon /> },
+    // { to: '/statusrules', text: 'Status Rules', icon: <RuleIcon /> },
   ];
 
   return (

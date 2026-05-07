@@ -167,7 +167,7 @@ export default function NewForm({ onSave, onCancel }) {
   const inp = (name, extra = {}) => ({
     border: `1.5px solid ${errors[name] ? "#EF4444" : "#E5E7EB"}`,
     borderRadius: 8, padding: "9px 13px", fontSize: 14,
-    color: "#111", outline: "none", width: "100%",
+    color: "#000", outline: "none", width: "100%",
     boxSizing: "border-box", fontFamily: "inherit", ...extra,
   });
 
@@ -180,10 +180,10 @@ export default function NewForm({ onSave, onCancel }) {
   const readOnly = (extra = {}) => inp("", { background: "#F9FAFB", color: "#6B7280", ...extra });
 
   return (
-    <div>
+    <div style={{ paddingTop: 56 }}>
       <Navbar
         title="Create Renewal List"
-        subtitle="Fill in the details to create a new renewal entry"
+        
         breadcrumb={[{ label: "Dashboard", onClick: onCancel }, { label: "Create Renewal List" }]}
         actions={
           <>
@@ -274,7 +274,7 @@ export default function NewForm({ onSave, onCancel }) {
               <select value={form.selectedEmployeeId}
                 onChange={e => handleEmployeeSelect(e.target.value)} style={sel("")}>
                 <option value="">Select employee</option>
-                {employees.map(em => (
+                {employees.sort((a, b) => a.Emp_name.localeCompare(b.Emp_name)).map(em => (
                   <option key={em._id} value={em._id}>{em.Emp_name}</option>
                 ))}
               </select>
@@ -412,9 +412,9 @@ export default function NewForm({ onSave, onCancel }) {
         </Section>
 
         {/* ── Submit ── */}
-        <div style={{ display: "flex", justifyContent: "flex-end", gap: 12, marginBottom: 40 }}>
-          <button onClick={onCancel} style={cancelBtnStyle}>Cancel</button>
-          <button onClick={handleSave} style={saveBtnStyle}>✅ Create Renewal</button>
+        <div style={{ display: "flex", justifyContent: "flex-end", gap: 12, marginBottom: 40, background: "#fff" }}>
+          <button onClick={onCancel} style={{ ...cancelBtnStyle, background: "#fff", color: "#1976d2" }}>Cancel</button>
+          <button onClick={handleSave} style={{ ...saveBtnStyle, background: "#1976d2", color: "#fff" }}>✅ Create Renewal</button>
         </div>
 
       </div>
@@ -428,7 +428,7 @@ function Section({ title, emoji, children }) {
     <div style={{ background: "#fff", borderRadius: 12, padding: 24, boxShadow: "0 1px 3px rgba(0,0,0,0.06)", overflow: "hidden" }}>
       <div style={{ margin: "-24px -24px 22px", background: LIME, padding: "13px 24px", display: "flex", alignItems: "center", gap: 10 }}>
         <span>{emoji}</span>
-        <span style={{ fontSize: 14, fontWeight: 700, color: "#000" }}>{title}</span>
+        <span style={{ fontSize: 14, fontWeight: 700, color: "#ffffff" }}>{title}</span>
       </div>
       {children}
     </div>
@@ -453,14 +453,14 @@ const grid3 = { display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 20 };
 
 const cancelBtnStyle = {
   padding: "11px 24px", borderRadius: 10,
-  border: "1.5px solid #E5E7EB", background: "#fff",
-  color: "#374151", fontSize: 14, fontWeight: 600,
+  border: "1.5px solid #E5E7EB", background: "#fff", color: "#1976d2",
+  fontSize: 14, fontWeight: 600,
   cursor: "pointer", fontFamily: "inherit",
 };
 
 const saveBtnStyle = {
   padding: "11px 28px", borderRadius: 10,
-  border: "none", background: "#1976d2", color: "#000",
+  border: "none", background: "#fff", color: "#1976d2",
   fontSize: 14, fontWeight: 700, cursor: "pointer",
   fontFamily: "inherit", display: "flex", alignItems: "center", gap: 8,
 };

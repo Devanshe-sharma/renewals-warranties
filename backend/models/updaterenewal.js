@@ -55,8 +55,6 @@ const RenewalEventSchema = new mongoose.Schema(
       default: '',
     },
     invoice_ref:   { type: String, default: '' },
-    renewed_by:    { type: String, default: '' },
-    next_due_date: { type: Date },
     proof_link:    { type: String, default: '' },
 
     // ── Additional Information ────────────────────────

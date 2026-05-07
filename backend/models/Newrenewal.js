@@ -61,6 +61,8 @@ const NewrenewalSchema = new mongoose.Schema(
 
     // ── Past Renewals (events log) ───────────────────
     past_renewals: { type: Array, default: [] },
+    renewal_status:      { type: String, default: 'not_yet_due' },
+    renewal_status_updated_at: { type: Date, default: null },
   },
   {
     collection: 'renewals',

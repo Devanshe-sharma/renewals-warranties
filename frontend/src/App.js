@@ -6,7 +6,9 @@ import NewForm from "./pages/newform";
 import UpdateForm from "./pages/updateform";
 import RenewalEventsPage from "./pages/Renewaleventspage";
 import { useCategoriesStore, CategoriesPage } from "./pages/categories";
+import StatusRulesPage from "./pages/StatusRulesPage";
 import { UserProvider } from "./context/UserContext";
+
 import "./App.css";
 
 function AppContent() {
@@ -30,6 +32,7 @@ function AppContent() {
           <Route path="/updaterenewal" element={<RenewalEventsPage onRecord={() => navigate("/updaterenewal/record")} onBack={() => navigate("/")} />} />
           <Route path="/updaterenewal/record" element={<UpdateForm onSave={(data) => { showToast(`Event ${data.event_id} recorded!`); navigate("/updaterenewal"); }} onCancel={() => navigate("/updaterenewal")} />} />
           <Route path="/categories" element={<CategoriesPage store={catStore} />} />
+          <Route path="/statusrules" element={<StatusRulesPage onBack={() => navigate("/")} />} />
         </Routes>
       </main>
 
@@ -51,8 +54,8 @@ function AppContent() {
       <style>{`
         * { box-sizing: border-box; }
         input:focus, select:focus, textarea:focus {
-          border-color: #ADE80A !important;
-          box-shadow: 0 0 0 3px #ADE80A40 !important;
+          border-color: #1976d2 !important;
+          box-shadow: 0 0 0 3px #1976d240 !important;
         }
         ::-webkit-scrollbar { width: 5px; height: 5px; }
         ::-webkit-scrollbar-thumb { background: #D1D5DB; border-radius: 3px; }
