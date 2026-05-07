@@ -28,21 +28,6 @@ const fmtDate = (d) =>
 const fmtCurrency = (n) =>
   n != null && n !== "" ? `₹ ${Number(n).toLocaleString("en-IN")}` : "—";
 
-const DECISION_META = {
-  Yes: { bg: "#DCFCE7", text: "#166534", dot: "#22C55E", label: "Renewed" },
-  No:  { bg: "#FEE2E2", text: "#991B1B", dot: "#EF4444", label: "Closed"  },
-};
-
-function DecisionBadge({ value }) {
-  const m = DECISION_META[value] || { bg: "#F3F4F6", text: "#6B7280", dot: "#9CA3AF", label: value || "—" };
-  return (
-    <span style={{ display: "inline-flex", alignItems: "center", gap: 5, background: m.bg, color: m.text, padding: "3px 10px", borderRadius: 20, fontSize: 12, fontWeight: 700, whiteSpace: "nowrap" }}>
-      <span style={{ width: 7, height: 7, borderRadius: "50%", background: m.dot, flexShrink: 0 }} />
-      {m.label}
-    </span>
-  );
-}
-
 function computeEventStatus(event) {
   if (event.renewal_required === "Yes") {
     const renewedOn = event.new_renewal_date || event.createdAt;
@@ -123,64 +108,133 @@ function EventDrawer({ event, onClose, statusRules }) {
   );
 
   return (
-    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 1000, display: "flex", justifyContent: "flex-end" }}>
-      <div onClick={(e) => e.stopPropagation()} style={{ width: 480, background: "#fff", height: "100%", overflowY: "auto", boxShadow: "-8px 0 40px rgba(0,0,0,0.15)", display: "flex", flexDirection: "column" }}>
-        <div style={{ background: LIME, padding: "16px 22px", display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0 }}>
-          <div>
-            <div style={{ fontSize: 14, fontWeight: 700, color: "#000" }}>{event.event_id}</div>
-            <div style={{ fontSize: 12, color: "#333", marginTop: 2 }}>{event.item_name}</div>
+  <div
+    onClick={onClose}
+    style={{
+      position: "fixed",
+      inset: 0,
+      background: "rgba(0,0,0,0.5)",
+      backdropFilter: "blur(6px)",
+      WebkitBackdropFilter: "blur(6px)",
+      zIndex: 99999,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: "24px 16px",
+    }}
+  >
+    <div
+      onClick={(e) => e.stopPropagation()}
+      style={{
+        background: "#fff",
+        borderRadius: 16,
+        width: "100%",
+        maxWidth: 860,
+        maxHeight: "90vh",
+        overflowY: "auto",
+        boxShadow: "0 24px 64px rgba(0,0,0,0.25)",
+      }}
+    >
+      {/* Header */}
+      <div
+        style={{
+          background: LIME,
+          borderRadius: "16px 16px 0 0",
+          padding: "16px 24px",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+        }}
+      >
+        <div>
+          <div style={{ fontSize: 15, fontWeight: 700, color: "#fff" }}>
+            {event.event_id}
           </div>
-          <button onClick={onClose} style={{ background: "rgba(0,0,0,0.1)", border: "none", borderRadius: 8, width: 30, height: 30, cursor: "pointer", fontSize: 15, display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+          <div style={{ fontSize: 12, color: "#dbeafe", marginTop: 2 }}>
+            {event.item_name}
+          </div>
         </div>
 
-        <div style={{ padding: 22, flex: 1 }}>
-          <DrawerSection title="Item Information">
-            <Row label="Event ID"         value={event.event_id} />
-            <Row label="Item ID"          value={event.item_id} />
-            <Row label="Item Name"        value={event.item_name} />
-            <Row label="Category"         value={event.category} />
-            <Row label="Sub-Category"     value={event.subcategory} />
-            <Row label="Renewal Required" value={<DecisionBadge value={event.renewal_required} />} />
-            <Row label="Status"           value={<StatusRuleBadge event={event} rules={statusRules} />} />
-          </DrawerSection>
+        <button
+          onClick={onClose}
+          style={{
+            background: "rgba(255,255,255,0.2)",
+            border: "none",
+            borderRadius: 8,
+            width: 32,
+            height: 32,
+            cursor: "pointer",
+            fontSize: 16,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            color: "#fff",
+          }}
+        >
+          ✕
+        </button>
+      </div>
 
-          <DrawerSection title="Dates" style={{ marginTop: 16 }}>
-            <Row label="Prev Start Date"  value={fmtDate(event.prev_start_date)} />
-            <Row label="Prev Expiry Date" value={fmtDate(event.prev_expiry_date)} />
-            <Row label="New Renewal Date" value={fmtDate(event.new_renewal_date)} />
-            <Row label="Frequency"        value={event.frequency} />
-            <Row label="New Expiry Date"  value={fmtDate(event.new_expiry_date)} />
-            <Row label="Next Due Date"    value={fmtDate(event.next_due_date)} />
-          </DrawerSection>
+      {/* Body */}
+      <div style={{ padding: 24 }}>
+        <DrawerSection title="Item Information">
+          <Row label="Event ID"         value={event.event_id} />
+          <Row label="Item ID"          value={event.item_id} />
+          <Row label="Item Name"        value={event.item_name} />
+          <Row label="Category"         value={event.category} />
+          <Row label="Sub-Category"     value={event.subcategory} />
+          <Row label="Status"           value={<StatusRuleBadge event={event} rules={statusRules} />} />
+        </DrawerSection>
 
-          {event.renewal_required === "Yes" && (
-            <DrawerSection title="Payment Details" style={{ marginTop: 16 }}>
-              <Row label="Amount"        value={fmtCurrency(event.renewal_amount)} />
-              <Row label="Payment Mode"  value={event.payment_mode} />
-              <Row label="Card Holder"   value={event.card_holder} />
-              <Row label="Invoice / Ref" value={event.invoice_ref} />
-              <Row label="Renewed By"    value={event.renewed_by} />
-              <Row label="Proof Link"    value={event.proof_link
-                ? <a href={event.proof_link} target="_blank" rel="noreferrer" style={{ color: "#059669" }}>{event.proof_link}</a>
-                : "—"} />
-            </DrawerSection>
+        <DrawerSection title="Dates" style={{ marginTop: 16 }}>
+          <Row label="Prev Start Date"  value={fmtDate(event.prev_start_date)} />
+          <Row label="Prev Expiry Date" value={fmtDate(event.prev_expiry_date)} />
+          <Row label="New Renewal Date" value={fmtDate(event.new_renewal_date)} />
+          <Row label="Frequency"        value={event.frequency} />
+          <Row label="New Expiry Date"  value={fmtDate(event.new_expiry_date)} />
+          <Row label="Next Due Date"    value={fmtDate(event.next_due_date)} />
+        </DrawerSection>
+
+        {event.renewal_required === "Yes" && (
+          <DrawerSection title="Payment Details" style={{ marginTop: 16 }}>
+            <Row label="Amount"        value={fmtCurrency(event.renewal_amount)} />
+            <Row label="Payment Mode"  value={event.payment_mode} />
+            <Row label="Card Holder"   value={event.card_holder} />
+            <Row label="Invoice / Ref" value={event.invoice_ref} />
+            <Row label="Renewed By"    value={event.renewed_by} />
+            <Row
+              label="Proof Link"
+              value={
+                event.proof_link ? (
+                  <a
+                    href={event.proof_link}
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{ color: "#059669" }}
+                  >
+                    {event.proof_link}
+                  </a>
+                ) : "—"
+              }
+            />
+          </DrawerSection>
+        )}
+
+        <DrawerSection title="Additional" style={{ marginTop: 16 }}>
+          <Row label="Remarks" value={event.remarks} />
+          <Row label="Email Sent" value={event.email_sent} />
+          {event.category === "Warranty" && (
+            <>
+              <Row label="User" value={event.user_person} />
+              <Row label="User Department" value={event.user_department} />
+            </>
           )}
-
-          <DrawerSection title="Additional" style={{ marginTop: 16 }}>
-            <Row label="Remarks"    value={event.remarks} />
-            <Row label="Email Sent" value={event.email_sent} />
-            {event.category === "Warranty" && (
-              <>
-                <Row label="User"            value={event.user_person} />
-                <Row label="User Department" value={event.user_department} />
-              </>
-            )}
-            <Row label="Recorded On" value={event.createdAt ? fmtDate(event.createdAt) : "—"} />
-          </DrawerSection>
-        </div>
+          <Row label="Recorded On" value={event.createdAt ? fmtDate(event.createdAt) : "—"} />
+        </DrawerSection>
       </div>
     </div>
-  );
+  </div>
+);
 }
 
 function DrawerSection({ title, children, style: s }) {
@@ -204,6 +258,7 @@ export default function RenewalEventsPage({ onRecord, onBack }) {
   const [search,     setSearch]     = useState("");
   const [statusF,   setStatusF]   = useState("all");
   const [catF,       setCatF]       = useState("all");
+  const [employeeF,  setEmployeeF]  = useState("all");
   const [selected,   setSelected]   = useState(null);
   const [statusRules, setStatusRules] = useState(DEFAULT_STATUS_RULES);
 
@@ -250,9 +305,14 @@ export default function RenewalEventsPage({ onRecord, onBack }) {
   }, []);
 
   // ── Stats ─────────────────────────────────────────────
-  const totalRenewed = events.filter((e) => e.renewal_required === "Yes").length;
-  const totalClosed  = events.filter((e) => e.renewal_required === "No").length;
   const cats = [...new Set(events.map((e) => e.category).filter(Boolean))].sort();
+
+  // Status counts for events
+  const statusCounts = events.reduce((acc, e) => {
+    const status = computeEventStatus(e);
+    acc[status] = (acc[status] || 0) + 1;
+    return acc;
+  }, {});
 
   // ── Filter events ─────────────────────────────────────
   const visibleEvents = events.filter((e) => {
@@ -263,7 +323,8 @@ export default function RenewalEventsPage({ onRecord, onBack }) {
         (e.event_id   || "").toLowerCase().includes(q) ||
         (e.renewed_by || "").toLowerCase().includes(q)) &&
       (statusF === "all" || computeEventStatus(e) === statusF) &&
-      (catF   === "all" || e.category === catF)
+      (catF   === "all" || e.category === catF) &&
+      (employeeF === "all" || (e.renewed_by || "").toLowerCase().includes(employeeF.toLowerCase()))
     );
   });
 
@@ -313,11 +374,13 @@ export default function RenewalEventsPage({ onRecord, onBack }) {
       />
 
       {/* ── Stats ── */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 16, marginBottom: 28 }}>
-        <StatsCard label="Total Events"  value={events.length}  accent={LIME}     />
-        <StatsCard label="Renewed"       value={totalRenewed}   accent="#22C55E"  />
-        <StatsCard label="Closed"        value={totalClosed}    accent="#EF4444"  />
-        <StatsCard label="Archived Items" value={archived.length} accent="#6366F1" />
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(6,1fr)", gap: 14, marginBottom: 28 }}>
+        <StatsCard label="Total Events" value={events.length}               accent={LIME}     />
+        <StatsCard label="Not Yet Due"  value={statusCounts.not_yet_due || 0} accent="#E5E7EB"  />
+        <StatsCard label="Due"          value={statusCounts.due         || 0} accent="#9CA3AF"  />
+        <StatsCard label="Done"         value={statusCounts.done         || 0} accent="#22C55E" />
+        <StatsCard label="Done Delayed" value={statusCounts.done_delayed || 0} accent="#F59E0B" />
+        <StatsCard label="Overdue"      value={statusCounts.overdue     || 0} accent="#EF4444"  />
       </div>
 
       {/* ── Tabs ── */}
@@ -347,10 +410,16 @@ export default function RenewalEventsPage({ onRecord, onBack }) {
               <option value="all">All Categories</option>
               {cats.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
+            <select value={employeeF} onChange={(e) => setEmployeeF(e.target.value)} style={selectStyle}>
+              <option value="all">All Users</option>
+              {[...new Set(events)].filter(e => e.renewed_by).map(e => e.renewed_by).filter((v, i, arr) => arr.indexOf(v) === i).sort().map(employee => (
+                <option key={employee} value={employee}>{employee}</option>
+              ))}
+            </select>
           </>
         )}
-        {(search || statusF !== "all" || catF !== "all") && (
-          <button onClick={() => { setSearch(""); setStatusF("all"); setCatF("all"); }} style={clearBtnStyle}>Clear</button>
+        {(search || statusF !== "all" || catF !== "all" || employeeF !== "all") && (
+          <button onClick={() => { setSearch(""); setStatusF("all"); setCatF("all"); setEmployeeF("all"); }} style={clearBtnStyle}>Clear</button>
         )}
       </div>
 

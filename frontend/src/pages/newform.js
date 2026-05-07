@@ -41,16 +41,50 @@ const getAdminRenewer = (employees) => {
   };
 };
 
+const getAdminUser = (employees) => {
+  const user = employees.find((emp) =>
+    (emp.Department || "").trim().toLowerCase().includes("admin") &&
+    ((emp["Department Head"] || "").trim() || (emp["Dept Head Email"] || "").trim())
+  );
+
+  return {
+    renewerName: user?.["Department Head"] || user?.Emp_name || "",
+    renewerDepartment: "Admin",
+    renewerEmail: user?.["Dept Head Email"] || user?.["desig Email Id"] || "",
+  };
+};
+
 export default function NewForm({ onSave, onCancel }) {
   const [form,       setForm]       = useState(BLANK);
   const [errors,     setErrors]     = useState({});
   const [words,      setWords]      = useState(0);
   const [categories, setCategories] = useState([]);
   const [employees,  setEmployees]  = useState([]);
+  const [nextItemId, setNextItemId]  = useState("RW 001");
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
-  // ── Fetch categories ──────────────────────────────────
+// ── Fetch next item ID ────────────────────────────────
+useEffect(() => {
+  fetch(`${process.env.REACT_APP_API_URL}/api/renewals`)
+    .then(r => r.json())
+    .then(data => {
+      if (data.success && data.data) {
+        const existingIds = data.data
+          .map(item => {
+            const match = (item.item_id || "").match(/RW[-\s]*(\d+)/i);   // ← item.item_id, not item.id
+            return match ? parseInt(match[1]) : 0;
+          })
+          .filter(id => id > 0);
+
+        const maxId = existingIds.length > 0 ? Math.max(...existingIds) : 0;
+        setNextItemId(`RW-${String(maxId + 1).padStart(4, "0")}`);
+      }
+    })
+    .catch(() => setNextItemId("RW —"));
+}, []);
+
+  // ── Fetch yyycategories ──────────────────────────────────
   useEffect(() => {
     fetch(`${process.env.REACT_APP_API_URL}/api/categories`)
       .then(r => r.json())
@@ -71,7 +105,7 @@ export default function NewForm({ onSave, onCancel }) {
         console.log("Employees loaded:", data.length);
         console.log("Sample:", data[0]);
         setEmployees(data);
-        setForm(f => ({ ...f, ...getAdminRenewer(data) }));
+        setForm(f => ({ ...f, ...getAdminUser(data) }));
       })
       .catch(err => console.error("Employee fetch error:", err));
   }, []);
@@ -182,7 +216,7 @@ export default function NewForm({ onSave, onCancel }) {
   return (
     <div style={{ paddingTop: 56 }}>
       <Navbar
-        title="Create Renewal List"
+        
         
         breadcrumb={[{ label: "Dashboard", onClick: onCancel }, { label: "Create Renewal List" }]}
         actions={
@@ -199,7 +233,7 @@ export default function NewForm({ onSave, onCancel }) {
         <Section title="Renewal Details" emoji="📋">
           <div style={grid2}>
             <Field label="Item ID">
-              <input value="Auto-generated" readOnly style={readOnly()} />
+              <input value={nextItemId} readOnly style={readOnly()} placeholder="Auto-generated" />
             </Field>
             <Field label="Category" error={errors.category} required>
               <select value={form.category} onChange={e => set("category", e.target.value)} style={sel("category")}>
@@ -294,7 +328,7 @@ export default function NewForm({ onSave, onCancel }) {
             <Field label="Email">
               <input value={form.email} readOnly style={readOnly()} placeholder="Auto-filled" />
             </Field>
-            <Field label="CC – Reporting Manager">
+            <Field label="Reporting Manager">
               <input value={form.reportingManager} readOnly style={readOnly()} placeholder="Auto-filled" />
             </Field>
           </div>
@@ -307,16 +341,17 @@ export default function NewForm({ onSave, onCancel }) {
               <input type="date" value={form.startDate}
                 onChange={e => set("startDate", e.target.value)} style={inp("startDate")} />
             </Field>
-            <Field label="End Date (auto-calculated)">
-              <input value={endDate ? fmtDate(endDate) : ""} readOnly
-                style={readOnly({ color: "#059669" })} placeholder="Set Service start date & frequency" />
-            </Field>
             <Field label="Renewal Frequency" error={errors.frequency} required>
               <select value={form.frequency} onChange={e => set("frequency", e.target.value)} style={sel("frequency")}>
                 <option value="">Select frequency</option>
                 {Object.keys(FREQ_MONTHS).map(f => <option key={f} value={f}>{f}</option>)}
               </select>
             </Field>
+            <Field label="End Date (auto-calculated)">
+              <input value={endDate ? fmtDate(endDate) : ""} readOnly
+                style={readOnly({ color: "#059669" })} placeholder="Set Service start date & frequency" />
+            </Field>
+            
             <Field label="1st Reminder (days before)">
               <input type="number" min="0" value={form.reminder1Days}
                 onChange={e => set("reminder1Days", +e.target.value)} style={inp("")} />
@@ -355,8 +390,17 @@ export default function NewForm({ onSave, onCancel }) {
         <Section title="Additional Details" emoji="ℹ️">
           <div style={grid2}>
             <Field label="Remarks">
-              <input value={form.remarks} onChange={e => set("remarks", e.target.value)}
-                style={inp("")} placeholder="Optional remarks" />
+              <textarea
+                value={form.remarks}
+                onChange={e => set("remarks", e.target.value)}
+                style={{
+                  ...inp(""),
+                  minHeight: "50px",
+                  resize: "vertical",
+                  paddingTop: "10px"
+                }}
+                placeholder="Optional remarks"
+              />
             </Field>
             <Field label="Website Link">
               <input type="url" value={form.link} onChange={e => set("link", e.target.value)}

@@ -2,8 +2,8 @@ import React, { useState, useEffect, useCallback } from "react";
 import Navbar, { NavbarButton } from "../components/navbar";
 
 const API       = process.env.REACT_APP_API_URL;
-const LIME      = "#1976d2";
-const LIME_PALE = "#F4FFD6";
+const LIME      = "#2563EB";
+const LIME_PALE = "#EFF6FF";
 
 const FREQ_MONTHS = { Monthly: 1, Quarterly: 3, "Half Yearly": 6, Annually: 12 };
 const DEFAULT_REMIND = {
@@ -33,50 +33,29 @@ const toDay       = (d) => { const x = new Date(d); x.setHours(0,0,0,0); return 
 
 // ────────────────────────────────────────────────────────
 // computeStatus
-//
-// Two modes:
-//   1. latestEvent supplied → item has been renewed → derive done / done_delayed
-//      from the event's new_renewal_date vs prev_expiry_date.
-//   2. No latestEvent      → never renewed → time-based status from item fields.
 // ────────────────────────────────────────────────────────
 export function computeStatus(renewal, latestEvent = null) {
   const today = toDay(new Date());
 
-  // ── Mode 1: item has at least one renewal event ────────
   if (latestEvent) {
-    // renewal_required = "No" means the item was deliberately closed (not renewed)
     if (latestEvent.renewal_required === "No") return "overdue";
-
     const renewedOn  = latestEvent.new_renewal_date  ? toDay(new Date(latestEvent.new_renewal_date))  : null;
     const prevExpiry = latestEvent.prev_expiry_date  ? toDay(new Date(latestEvent.prev_expiry_date))  : null;
-
     if (renewedOn && prevExpiry) {
-      // Done   = renewed on or before the previous expiry deadline
-      // Done Delayed = renewed after the previous expiry deadline
       return renewedOn <= prevExpiry ? "done" : "done_delayed";
     }
-
-    // Fallback when event dates are incomplete
     return "done";
   }
 
-  // ── Mode 2: no event yet → time-based ─────────────────
   const endDate = renewal.endDate   ? toDay(new Date(renewal.endDate))   : null;
   const r2Date  = renewal.reminder2Date ? toDay(new Date(renewal.reminder2Date)) : null;
 
   if (!endDate) return "not_yet_due";
-
-  // Overdue: today is strictly past the expiry date
   if (today > endDate) return "overdue";
-
-  // Due: today is on or after the 2nd reminder date (and on/before expiry)
   if (r2Date && today >= r2Date) return "due";
-
-  // Not Yet Due: before the 2nd reminder date
   return "not_yet_due";
 }
 
-// Legacy compat shim (not used in new logic)
 export function getStatus() { return "not_yet_due"; }
 
 // ── Status badge ──────────────────────────────────────────
@@ -157,18 +136,39 @@ const mapRenewal = (r) => ({
   pastRenewals:       r.past_renewals        || [],
 });
 
-// ────────────────────────────────────────────────────────
-// Build a map: item_id → latest event object
-// Events are assumed newest-first from the API.
-// ────────────────────────────────────────────────────────
 function buildLatestEventMap(events) {
   const map = {};
   for (const ev of events) {
-    if (!map[ev.item_id]) {
-      map[ev.item_id] = ev; // first occurrence per item = most recent
-    }
+    if (!map[ev.item_id]) map[ev.item_id] = ev;
   }
   return map;
+}
+
+// ── Detail view helpers ───────────────────────────────────
+function DetailSection({ title, children }) {
+  return (
+    <div style={{ border: "1px solid #F3F4F6", borderRadius: 10, overflow: "hidden" }}>
+      <div style={{ background: "#F9FAFB", padding: "8px 16px", fontSize: 12, fontWeight: 700, color: "#374151", borderBottom: "1px solid #F3F4F6" }}>{title}</div>
+      <div style={{ padding: 16 }}>{children}</div>
+    </div>
+  );
+}
+function DetailGrid({ cols = 3, children }) {
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: "10px 24px" }}>
+      {children}
+    </div>
+  );
+}
+function DetailField({ label, value, mono, highlight }) {
+  return (
+    <div>
+      <div style={{ fontSize: 11, color: "#9CA3AF", fontWeight: 600 }}>{label}</div>
+      <div style={{ fontSize: 13, color: highlight ? "#059669" : "#111", fontWeight: highlight ? 700 : 500, marginTop: 2, fontFamily: mono ? "monospace" : "inherit" }}>
+        {value || "—"}
+      </div>
+    </div>
+  );
 }
 
 // ────────────────────────────────────────────────────────
@@ -186,51 +186,109 @@ function HistoryModal({ renewal, onClose, onEdit }) {
       .finally(() => setLoading(false));
   }, [renewal.id]);
 
-  // Use latest event (events[0] = newest) for the header status badge.
-  // Falls back to time-based status if no events yet.
   const latestEvent  = events.length > 0 ? events[0] : null;
   const latestStatus = computeStatus(renewal, latestEvent);
 
   return (
-    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 1000, display: "flex", alignItems: "flex-start", justifyContent: "center", overflowY: "auto", padding: "32px 16px" }}>
-      <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 16, width: "100%", maxWidth: 860, boxShadow: "0 20px 60px rgba(0,0,0,0.2)" }}>
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 2147483647, display: "flex", alignItems: "center", justifyContent: "center", padding: "24px 16px" }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 16, width: "100%", maxWidth: 860, maxHeight: "90vh", overflowY: "auto", boxShadow: "0 24px 64px rgba(0,0,0,0.25)" }}>
 
         {/* Header */}
         <div style={{ background: LIME, borderRadius: "16px 16px 0 0", padding: "16px 24px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div>
-            <div style={{ fontSize: 15, fontWeight: 700, color: "#000" }}>{renewal.itemName}</div>
-            <div style={{ fontSize: 12, color: "#333", marginTop: 2 }}>{renewal.id} · {renewal.category}</div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: "#fff" }}>{renewal.itemName}</div>
+            <div style={{ fontSize: 12, color: "#bfdbfe", marginTop: 2 }}>{renewal.id} · {renewal.category}</div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <StatusBadge status={latestStatus} />
-            <button onClick={onClose} style={{ background: "rgba(0,0,0,0.1)", border: "none", borderRadius: 8, width: 32, height: 32, cursor: "pointer", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+            <button onClick={onClose} style={{ background: "rgba(255,255,255,0.2)", border: "none", borderRadius: 8, width: 32, height: 32, cursor: "pointer", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff" }}>✕</button>
           </div>
         </div>
 
         <div style={{ padding: 24, display: "flex", flexDirection: "column", gap: 20 }}>
 
-          {/* Item summary */}
-          <div style={{ border: "1px solid #F3F4F6", borderRadius: 10, overflow: "hidden" }}>
-            <div style={{ background: "#F9FAFB", padding: "8px 16px", fontSize: 12, fontWeight: 700, color: "#374151", borderBottom: "1px solid #F3F4F6" }}>Item Details</div>
-            <div style={{ padding: 16, display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "8px 24px" }}>
-              {[
-                { label: "Vendor",       value: renewal.vendor      },
-                { label: "Responsible",  value: renewal.responsible },
-                { label: "Department",   value: renewal.department  },
-                { label: "Start Date",   value: fmtDate(renewal.startDate) },
-                { label: "End Date",     value: fmtDate(renewal.endDate)   },
-                { label: "Frequency",    value: renewal.frequency          },
-                { label: "2nd Reminder", value: fmtDate(renewal.reminder2Date) },
-                { label: "Email",        value: renewal.email       },
-                { label: "Remarks",      value: renewal.remarks     },
-              ].map(({ label, value }) => (
-                <div key={label}>
-                  <div style={{ fontSize: 11, color: "#9CA3AF", fontWeight: 600 }}>{label}</div>
-                  <div style={{ fontSize: 13, color: "#111", fontWeight: 500, marginTop: 2 }}>{value || "—"}</div>
-                </div>
-              ))}
-            </div>
-          </div>
+          <DetailSection title="📋 Renewal Details">
+            <DetailGrid cols={3}>
+              <DetailField label="Item ID"      value={renewal.id} mono />
+              <DetailField label="Category"     value={renewal.category} />
+              <DetailField label="Subcategory"  value={renewal.subcategory} />
+              <DetailField label="Item Name"    value={renewal.itemName} />
+              <DetailField label="Vendor"       value={renewal.vendor} />
+              <DetailField label="Authority"    value={renewal.authority} />
+            </DetailGrid>
+            {renewal.description && (
+              <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid #F3F4F6" }}>
+                <div style={{ fontSize: 11, color: "#9CA3AF", fontWeight: 600, marginBottom: 4 }}>Description</div>
+                <div style={{ fontSize: 13, color: "#374151", lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{renewal.description}</div>
+              </div>
+            )}
+          </DetailSection>
+
+          <DetailSection title="👤 Renewer Details">
+            <DetailGrid cols={3}>
+              <DetailField label="Renewer Name"       value={renewal.renewerName} />
+              <DetailField label="Renewer Department" value={renewal.renewerDepartment} />
+              <DetailField label="Renewer Email"      value={renewal.renewerEmail} />
+            </DetailGrid>
+          </DetailSection>
+
+          <DetailSection title="👤 User Details">
+            <DetailGrid cols={3}>
+              <DetailField label="Employee Name"     value={renewal.empName} />
+              <DetailField label="Employee ID"       value={renewal.empId} mono />
+              <DetailField label="Department"        value={renewal.department} />
+              <DetailField label="Designation"       value={renewal.designation} />
+              <DetailField label="Email"             value={renewal.email} />
+              <DetailField label="Reporting Manager" value={renewal.reportingManager} />
+            </DetailGrid>
+          </DetailSection>
+
+          <DetailSection title="🔔 Reminders">
+            <DetailGrid cols={3}>
+              <DetailField label="Start Date"    value={fmtDate(renewal.startDate)} />
+              <DetailField label="End Date"      value={fmtDate(renewal.endDate)} highlight />
+              <DetailField label="Frequency"     value={renewal.frequency} />
+              <DetailField label="1st Reminder"  value={renewal.reminder1Days ? `${renewal.reminder1Days} days before` : "—"} />
+              <DetailField label="2nd Reminder"  value={renewal.reminder2Days ? `${renewal.reminder2Days} days before` : "—"} />
+              <DetailField label="Final Reminder" value={renewal.reminderFinalDays ? `${renewal.reminderFinalDays} day before` : "—"} />
+              {renewal.reminder2Date && (
+                <DetailField label="2nd Reminder Date" value={fmtDate(renewal.reminder2Date)} />
+              )}
+            </DetailGrid>
+          </DetailSection>
+
+          <DetailSection title="ℹ️ Additional Details">
+            <DetailGrid cols={3}>
+              <DetailField label="Remarks" value={renewal.remarks} />
+              {renewal.link
+                ? <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                    <div style={{ fontSize: 11, color: "#9CA3AF", fontWeight: 600 }}>Website Link</div>
+                    <a href={renewal.link} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, color: "#1976d2", textDecoration: "none", wordBreak: "break-all" }}>{renewal.link}</a>
+                  </div>
+                : <DetailField label="Website Link" value="—" />
+              }
+              {renewal.category === "Warranty" && <>
+                <DetailField label="Assigned User"    value={renewal.userPerson} />
+                <DetailField label="User Department"  value={renewal.userDepartment} />
+              </>}
+            </DetailGrid>
+          </DetailSection>
+
+          {(renewal.attachment1Link || renewal.attachment2Link) && (
+            <DetailSection title="📎 Attachments">
+              <DetailGrid cols={2}>
+                {[1, 2].map(n => {
+                  const link = renewal[`attachment${n}Link`];
+                  return link ? (
+                    <div key={n} style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                      <div style={{ fontSize: 11, color: "#9CA3AF", fontWeight: 600 }}>Attachment {n}</div>
+                      <a href={link} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, color: "#1976d2", textDecoration: "none", wordBreak: "break-all" }}>{link}</a>
+                    </div>
+                  ) : null;
+                })}
+              </DetailGrid>
+            </DetailSection>
+          )}
 
           {/* Renewal history */}
           <div style={{ border: "1px solid #F3F4F6", borderRadius: 10, overflow: "hidden" }}>
@@ -255,7 +313,6 @@ function HistoryModal({ renewal, onClose, onEdit }) {
                   </thead>
                   <tbody>
                     {events.map((ev, idx) => {
-                      // Per-event status using same logic as computeStatus mode-1
                       let evStatus;
                       if (ev.renewal_required === "No") {
                         evStatus = "overdue";
@@ -272,17 +329,15 @@ function HistoryModal({ renewal, onClose, onEdit }) {
                       const isLatest = idx === 0;
                       return (
                         <tr key={ev._id}
-                          style={{ borderBottom: "1px solid #F9FAFB", background: isLatest ? "#FAFFFE" : "transparent" }}
+                          style={{ borderBottom: "1px solid #F9FAFB", background: isLatest ? "#EFF6FF" : "transparent" }}
                           onMouseEnter={e => e.currentTarget.style.background = "#F9FAFB"}
-                          onMouseLeave={e => e.currentTarget.style.background = isLatest ? "#FAFFFE" : "transparent"}
+                          onMouseLeave={e => e.currentTarget.style.background = isLatest ? "#EFF6FF" : "transparent"}
                         >
                           <td style={{ padding: "11px 14px" }}>
                             <div style={{ fontSize: 11, color: "#9CA3AF", fontFamily: "monospace" }}>{ev.event_id}</div>
                             {isLatest && <div style={{ fontSize: 9, color: "#059669", fontWeight: 700, marginTop: 1 }}>LATEST</div>}
                           </td>
-                          <td style={{ padding: "11px 14px" }}>
-                            <StatusBadge status={evStatus} />
-                          </td>
+                          <td style={{ padding: "11px 14px" }}><StatusBadge status={evStatus} /></td>
                           <td style={{ padding: "11px 14px", fontSize: 12, color: "#374151" }}>{fmtDate(ev.prev_expiry_date)}</td>
                           <td style={{ padding: "11px 14px", fontSize: 12, color: "#374151" }}>{fmtDate(ev.new_renewal_date)}</td>
                           <td style={{ padding: "11px 14px", fontSize: 12, color: "#059669", fontWeight: 600 }}>{fmtDate(ev.new_expiry_date)}</td>
@@ -302,7 +357,7 @@ function HistoryModal({ renewal, onClose, onEdit }) {
           {/* Footer */}
           <div style={{ display: "flex", justifyContent: "flex-end", gap: 12 }}>
             <button onClick={onClose} style={cancelStyle}>Close</button>
-            <button onClick={onEdit} style={{ ...saveStyle, background: LIME, color: "#000" }}>✏️ Edit Item</button>
+            <button onClick={onEdit} style={saveStyle}>✏️ Edit Item</button>
           </div>
         </div>
       </div>
@@ -369,7 +424,10 @@ function EditModal({ renewal, categories, onClose, onSaved }) {
 
   const handleEmployeeSelect = (id) => {
     const emp = employees.find(e => e._id === id);
-    if (!emp) { setForm(f => ({ ...f, selectedEmployeeId: "", empName: "", empId: "", department: "", designation: "", email: "", reportingManager: "" })); return; }
+    if (!emp) {
+      setForm(f => ({ ...f, selectedEmployeeId: "", empName: "", empId: "", department: "", designation: "", email: "", reportingManager: "" }));
+      return;
+    }
     setForm(f => ({
       ...f,
       selectedEmployeeId: id,
@@ -413,42 +471,65 @@ function EditModal({ renewal, categories, onClose, onSaved }) {
   const ro  = (extra = {}) => inp("", { background: "#F9FAFB", color: "#6B7280", ...extra });
 
   return (
-    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 1000, display: "flex", alignItems: "flex-start", justifyContent: "center", overflowY: "auto", padding: "40px 16px" }}>
-      <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 16, width: "100%", maxWidth: 780, boxShadow: "0 20px 60px rgba(0,0,0,0.2)" }}>
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 2147483647, display: "flex", alignItems: "center", justifyContent: "center", padding: "24px 16px" }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 16, width: "100%", maxWidth: 780, maxHeight: "90vh", overflowY: "auto", boxShadow: "0 24px 64px rgba(0,0,0,0.25)" }}>
+
+        {/* Header */}
         <div style={{ background: LIME, borderRadius: "16px 16px 0 0", padding: "16px 24px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div>
-            <div style={{ fontSize: 15, fontWeight: 700, color: "#000" }}>Edit Renewal</div>
-            <div style={{ fontSize: 12, color: "#333", marginTop: 2 }}>{renewal.id} · {renewal.itemName}</div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: "#fff" }}>Edit Renewal</div>
+            <div style={{ fontSize: 12, color: "#bfdbfe", marginTop: 2 }}>{renewal.id} · {renewal.itemName}</div>
           </div>
-          <button onClick={onClose} style={{ background: "rgba(0,0,0,0.1)", border: "none", borderRadius: 8, width: 32, height: 32, cursor: "pointer", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+          <button onClick={onClose} style={{ background: "rgba(255,255,255,0.2)", border: "none", borderRadius: 8, width: 32, height: 32, cursor: "pointer", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff" }}>✕</button>
         </div>
 
         <div style={{ padding: 24, display: "flex", flexDirection: "column", gap: 20 }}>
+
           <MSection title="Renewal Details">
+            {/* Row 1: Item ID + Category */}
             <div style={g2}>
-              <MField label="Item ID"><input value={renewal.id} readOnly style={ro()} /></MField>
+              <MField label="Item ID">
+                <input value={renewal.id} readOnly style={ro()} />
+              </MField>
               <MField label="Category *" error={errors.category}>
                 <select value={form.category} onChange={e => { set("category", e.target.value); set("subcategory", ""); }} style={sel("category")}>
                   <option value="">Choose</option>
+                  {/* Fallback: keep existing value visible even if categories haven't loaded/matched */}
+                  {form.category && !categories.find(c => c.name === form.category) && (
+                    <option value={form.category}>{form.category}</option>
+                  )}
                   {categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
                 </select>
               </MField>
             </div>
-            {subcats.length > 0 && (
-              <div style={{ marginTop: 14 }}>
-                <MField label="Subcategory">
-                  <select value={form.subcategory} onChange={e => set("subcategory", e.target.value)} style={sel("")}>
-                    <option value="">Choose</option>
-                    {subcats.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
-                  </select>
-                </MField>
-              </div>
-            )}
-            <div style={{ ...g2, marginTop: 14 }}>
-              <MField label="Item Name *" error={errors.itemName}><input value={form.itemName} onChange={e => set("itemName", e.target.value)} style={inp("itemName")} /></MField>
-              <MField label="Vendor"><input value={form.vendor} onChange={e => set("vendor", e.target.value)} style={inp("")} /></MField>
-              <MField label="Authority"><input value={form.authority || ""} onChange={e => set("authority", e.target.value)} style={inp("")} /></MField>
+
+            {/* Subcategory — always visible */}
+            <div style={{ marginTop: 14 }}>
+              <MField label="Subcategory">
+                <select value={form.subcategory} onChange={e => set("subcategory", e.target.value)} style={sel("")}>
+                  <option value="">None</option>
+                  {/* Fallback: keep existing subcategory visible even if subcats list is empty */}
+                  {form.subcategory && !subcats.find(s => s.name === form.subcategory) && (
+                    <option value={form.subcategory}>{form.subcategory}</option>
+                  )}
+                  {subcats.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
+                </select>
+              </MField>
             </div>
+
+            {/* Row 2: Item Name + Vendor + Authority */}
+            <div style={{ ...g2, marginTop: 14 }}>
+              <MField label="Item Name *" error={errors.itemName}>
+                <input value={form.itemName} onChange={e => set("itemName", e.target.value)} style={inp("itemName")} />
+              </MField>
+              <MField label="Vendor">
+                <input value={form.vendor} onChange={e => set("vendor", e.target.value)} style={inp("")} />
+              </MField>
+              <MField label="Authority">
+                <input value={form.authority || ""} onChange={e => set("authority", e.target.value)} style={inp("")} />
+              </MField>
+            </div>
+
             <div style={{ marginTop: 14 }}>
               <MField label="Description" error={errors.description}>
                 <textarea value={form.description} onChange={e => set("description", e.target.value)} style={{ ...inp("description"), resize: "vertical", minHeight: 70 }} />
@@ -500,8 +581,8 @@ function EditModal({ renewal, categories, onClose, onSaved }) {
               <MField label="Final Reminder (days before)"><input type="number" min="0" value={form.reminderFinalDays} onChange={e => set("reminderFinalDays", +e.target.value)} style={inp("")} /></MField>
             </div>
             {endDate && (
-              <div style={{ marginTop: 14, background: "#F0FDF4", border: "1px solid #BBF7D0", borderRadius: 10, padding: "12px 16px" }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: "#166534", marginBottom: 10 }}>📅 Reminder Preview</div>
+              <div style={{ marginTop: 14, background: "#EFF6FF", border: "1px solid #BFDBFE", borderRadius: 10, padding: "12px 16px" }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: "#1e40af", marginBottom: 10 }}>📅 Reminder Preview</div>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 12 }}>
                   {[
                     { label: "End Date",                             date: endDate,                       color: "#059669" },
@@ -580,7 +661,7 @@ function MField({ label, error, children }) {
 const g2 = { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 };
 const g3 = { display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 14 };
 const cancelStyle = { padding: "10px 22px", borderRadius: 8, border: "1.5px solid #E5E7EB", background: "#fff", color: "#374151", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" };
-const saveStyle   = { padding: "10px 26px", borderRadius: 8, border: "none", background: LIME, color: "#000", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" };
+const saveStyle   = { padding: "10px 26px", borderRadius: 8, border: "none", background: LIME, color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" };
 
 // ────────────────────────────────────────────────────────
 // DASHBOARD
@@ -588,7 +669,7 @@ const saveStyle   = { padding: "10px 26px", borderRadius: 8, border: "none", bac
 export default function Dashboard({ categories = [], onNew, onEdit, onSelect, onUpdate, onNavigateUpdateForm }) {
   const [renewals,        setRenewals]        = useState([]);
   const [archived,        setArchived]        = useState([]);
-  const [latestEventMap,  setLatestEventMap]  = useState({}); // item_id → latest event
+  const [latestEventMap,  setLatestEventMap]  = useState({});
   const [loading,         setLoading]         = useState(true);
   const [search,          setSearch]          = useState("");
   const [statusF,         setStatusF]         = useState("all");
@@ -603,7 +684,7 @@ export default function Dashboard({ categories = [], onNew, onEdit, onSelect, on
       const [renewRes, arRes, evRes] = await Promise.all([
         fetch(`${API}/api/renewals`),
         fetch(`${API}/api/renewals/archived/list`),
-        fetch(`${API}/api/renewal-events`),           // ← fetch all events for status
+        fetch(`${API}/api/renewal-events`),
       ]);
       const renewData = await renewRes.json();
       const arData    = await arRes.json();
@@ -621,9 +702,7 @@ export default function Dashboard({ categories = [], onNew, onEdit, onSelect, on
 
   useEffect(() => { fetchRenewals(); }, [fetchRenewals]);
 
-  // ── Status counts ─────────────────────────────────────
   const statusCounts = renewals.reduce((acc, r) => {
-    // Pass the latest event object (or null) — same as table rows below
     const s = computeStatus(r, latestEventMap[r.id] ?? null);
     acc[s] = (acc[s] || 0) + 1;
     return acc;
@@ -731,7 +810,6 @@ export default function Dashboard({ categories = [], onNew, onEdit, onSelect, on
             </thead>
             <tbody>
               {visible.map(r => {
-                // Pass latest event from the shared map — this is the single source of truth
                 const status = computeStatus(r, latestEventMap[r.id] ?? null);
                 return (
                   <tr key={r.id}
@@ -752,14 +830,13 @@ export default function Dashboard({ categories = [], onNew, onEdit, onSelect, on
                         <td style={{ padding: "13px 16px", fontSize: 13, color: "#374151" }}>{r.responsible}</td>
                         <td style={{ padding: "13px 16px" }}>
                           <div style={{ fontSize: 13, color: "#374151" }}>{fmtDate(r.endDate)}</div>
-                          {/* Only show DaysChip when status is time-based (no event yet) */}
                           {!latestEventMap[r.id] && <DaysChip endDate={r.endDate} />}
                         </td>
                         <td style={{ padding: "13px 16px" }}><StatusBadge status={status} /></td>
                         <td style={{ padding: "13px 16px" }}>
                           <button
                             onClick={e => { e.stopPropagation(); setEditMode(r); }}
-                            style={{ background: LIME_PALE, color: "#4B5320", border: `1px solid ${LIME}`, borderRadius: 7, padding: "5px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}
+                            style={{ background: LIME_PALE, color: "#1d4ed8", border: `1px solid ${LIME}`, borderRadius: 7, padding: "5px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}
                           >
                             Edit
                           </button>
@@ -791,7 +868,6 @@ export default function Dashboard({ categories = [], onNew, onEdit, onSelect, on
         </div>
       </div>
 
-      {/* ── History modal ── */}
       {historyMode && (
         <HistoryModal
           renewal={historyMode}
@@ -800,7 +876,6 @@ export default function Dashboard({ categories = [], onNew, onEdit, onSelect, on
         />
       )}
 
-      {/* ── Edit modal ── */}
       {editMode && (
         <EditModal
           renewal={editMode}

@@ -1,4 +1,4 @@
-import { useState, useContext } from "react";
+import { useState, useContext, useEffect } from "react";
 import { UserContext } from "../context/UserContext";
 import Navbar from "../components/navbar";
 
@@ -130,7 +130,23 @@ export const DEFAULT_CATEGORIES = [
 //   <CategoryManager store={catStore} />
 // ────────────────────────────────────────────────────────
 export function useCategoriesStore(initial = DEFAULT_CATEGORIES) {
-  const [categories, setCategories] = useState(initial);
+  const [categories, setCategories] = useState(() => {
+    try {
+      const saved = localStorage.getItem("renewals_categories");
+      return saved ? JSON.parse(saved) : initial;
+    } catch (err) {
+      console.error("Failed to load saved categories:", err);
+      return initial;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("renewals_categories", JSON.stringify(categories));
+    } catch (err) {
+      console.error("Failed to save categories:", err);
+    }
+  }, [categories]);
 
   /** Add a new category */
   const addCategory = (name) => {

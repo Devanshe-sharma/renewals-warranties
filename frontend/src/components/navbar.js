@@ -15,10 +15,10 @@ const pageTitles = {
 const TOOLBAR_H = 56;
 
 export default function Navbar({ title, subtitle, breadcrumb = [], actions }) {
-  const nav = useNavigate();
+  // const nav = useNavigate();
   const loc = useLocation();
   
-  const pageTitle = pageTitles[loc.pathname] || title || 'Renewals & Warranties';
+  const pageTitle = pageTitles[loc.pathname] || title || 'Renewal List';
 
   return (
     <>
@@ -38,7 +38,7 @@ export default function Navbar({ title, subtitle, breadcrumb = [], actions }) {
           justifyContent: 'space-between' 
         }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            {breadcrumb.length > 0 && (
+            {/* {breadcrumb.length > 0 && (
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 {breadcrumb.map((crumb, i) => (
                   <React.Fragment key={i}>
@@ -63,7 +63,7 @@ export default function Navbar({ title, subtitle, breadcrumb = [], actions }) {
                   </React.Fragment>
                 ))}
               </Box>
-            )}
+            )} */}
             <Typography variant="h6" fontWeight={700} color="white">
               {pageTitle}
             </Typography>
