@@ -86,16 +86,28 @@ useEffect(() => {
 
   // ── Fetch yyycategories ──────────────────────────────────
   useEffect(() => {
-    fetch(`${process.env.REACT_APP_API_URL}/api/categories`)
-      .then(r => r.json())
-      .then(data => setCategories(
-        data.map(c => ({
-          id: c._id, name: c.name,
-          subcategories: (c.subcategories || []).map(s => ({ id: s._id, name: s.name }))
+  fetch(`${process.env.REACT_APP_API_URL}/api/categories`)
+    .then((r) => r.json())
+    .then((res) => {
+      console.log("Categories response:", res);
+
+      const categoryData = res.data || [];
+
+      setCategories(
+        categoryData.map((c) => ({
+          id: c._id,
+          name: c.name,
+          subcategories: (c.subcategories || []).map((s) => ({
+            id: s._id,
+            name: s.name,
+          })),
         }))
-      ))
-      .catch(err => console.error("Category fetch error:", err));
-  }, []);
+      );
+    })
+    .catch((err) =>
+      console.error("Category fetch error:", err)
+    );
+}, []);
 
   // ── Fetch employees ───────────────────────────────────
   useEffect(() => {
