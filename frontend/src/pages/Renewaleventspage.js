@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import Navbar, { NavbarButton } from "../components/navbar";
+import UpdateForm from "./updateform";
 
 const API  = process.env.REACT_APP_API_URL;
 const LIME = "#1976d2";
@@ -261,6 +262,7 @@ export default function RenewalEventsPage({ onRecord, onBack }) {
   const [employeeF,  setEmployeeF]  = useState("all");
   const [selected,   setSelected]   = useState(null);
   const [statusRules, setStatusRules] = useState(DEFAULT_STATUS_RULES);
+  const [showUpdateForm, setShowUpdateForm] = useState(false);
 
   // ── Fetch events ──────────────────────────────────────
   const fetchEvents = useCallback(async () => {
@@ -371,7 +373,7 @@ const visibleEvents = events.filter((e) => {
         title="Renewal Events"
         subtitle="All recorded renewal events across items"
         breadcrumb={[{ label: "Dashboard", onClick: onBack }, { label: "Renewal Events" }]}
-        actions={<NavbarButton onClick={onRecord} icon="✏️" label="Update Renewals" />}
+        actions={<NavbarButton onClick={() => setShowUpdateForm(true)} icon="✏️" label="Update Renewals" />}
       />
 
       {/* ── Stats ── */}
@@ -535,8 +537,19 @@ const visibleEvents = events.filter((e) => {
       {selected && (
         <EventDrawer event={selected} statusRules={statusRules} onClose={() => setSelected(null)} />
       )}
+      {showUpdateForm && (
+        <UpdateForm
+          onSave={() => {
+            setShowUpdateForm(false);
+            fetchEvents();
+            fetchArchived();
+          }}
+          onCancel={() => setShowUpdateForm(false)}
+        />
+      )}
     </div>
   );
+   
 }
 
 const inputStyle    = { flex: 1, minWidth: 220, border: "1.5px solid #E5E7EB", borderRadius: 8, padding: "8px 14px", fontSize: 14, outline: "none", color: "#111", fontFamily: "inherit" };

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import Navbar from "../components/navbar";
 
+
 const LIME = "#1976d2";
 
 const FREQ_MONTHS = { Monthly: 1, Quarterly: 3, "Half Yearly": 6, Annually: 12 };
@@ -294,9 +295,30 @@ const handleEmployeeSelect = (id) => {
   const showRenewalFields = form.renewal_required === "Yes";
   const isWarranty        = form.category === "Warranty";
 
-  return (
-    <div style={{ paddingTop: 56 }}>
-      <Navbar
+return (
+  <div
+    style={{
+      position: "fixed", inset: 0,
+      background: "rgba(0,0,0,0.5)",
+      backdropFilter: "blur(6px)",
+      WebkitBackdropFilter: "blur(6px)",
+      zIndex: 2147483647,
+      display: "flex", alignItems: "flex-start", justifyContent: "center",
+      overflowY: "auto",
+      padding: "24px 16px",
+    }}
+  >
+  <div
+    style={{
+      background: "#F3F4F6",
+      borderRadius: 16,
+      width: "100%",
+      maxWidth: 900,
+      boxShadow: "0 24px 64px rgba(0,0,0,0.25)",
+      marginBottom: 24,
+    }}
+  >
+      {/* <Navbar
         title="Record Renewal Event"
         // subtitle="Log a renewal event against an existing renewal item"
         breadcrumb={[{ label: "Renewal Events", onClick: onCancel }, { label: "Record Event" }]}
@@ -308,7 +330,7 @@ const handleEmployeeSelect = (id) => {
             </button>
           </>
         }
-      />
+      /> */}
 
       <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
 
@@ -528,7 +550,9 @@ const handleEmployeeSelect = (id) => {
           </button>
         </div>
       </div>
-    </div>
+      </div>
+    </div> 
+
   );
 }
 

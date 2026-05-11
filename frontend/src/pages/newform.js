@@ -28,19 +28,6 @@ const addMonths = (d, n) => { const r = new Date(d); r.setMonth(r.getMonth() + n
 const fmtISO    = (d)    => d ? new Date(d).toISOString().split("T")[0] : "";
 const fmtDate   = (d)    => d ? new Date(d).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "";
 
-const getAdminRenewer = (employees) => {
-  const admin = employees.find((emp) =>
-    (emp.Department || "").trim().toLowerCase().includes("admin") &&
-    ((emp["Department Head"] || "").trim() || (emp["Dept Head Email"] || "").trim())
-  );
-
-  return {
-    renewerName: admin?.["Department Head"] || admin?.Emp_name || "",
-    renewerDepartment: "Admin",
-    renewerEmail: admin?.["Dept Head Email"] || admin?.["desig Email Id"] || "",
-  };
-};
-
 const getAdminUser = (employees) => {
   const user = employees.find((emp) =>
     (emp.Department || "").trim().toLowerCase().includes("admin") &&
@@ -54,7 +41,7 @@ const getAdminUser = (employees) => {
   };
 };
 
-export default function NewForm({ onSave, onCancel }) {
+export default function NewForm({ onSave, onCancel, embedded = false }) {
   const [form,       setForm]       = useState(BLANK);
   const [errors,     setErrors]     = useState({});
   const [words,      setWords]      = useState(0);
@@ -226,18 +213,18 @@ useEffect(() => {
   const readOnly = (extra = {}) => inp("", { background: "#F9FAFB", color: "#6B7280", ...extra });
 
   return (
-    <div style={{ paddingTop: 56 }}>
-      <Navbar
-        
-        
-        breadcrumb={[{ label: "Dashboard", onClick: onCancel }, { label: "Create Renewal List" }]}
-        actions={
-          <>
-            <button onClick={onCancel} style={cancelBtnStyle}>Cancel</button>
-            <button onClick={handleSave} style={saveBtnStyle}> Create Renewal List</button>
-          </>
-        }
-      />
+    <div style={{ paddingTop: embedded ? 0 : 56 }}>
+      {!embedded && (
+        <Navbar
+          breadcrumb={[{ label: "Dashboard", onClick: onCancel }, { label: "Create Renewal List" }]}
+          actions={
+            <>
+              <button onClick={onCancel} style={cancelBtnStyle}>Cancel</button>
+              <button onClick={handleSave} style={saveBtnStyle}> Create Renewal List</button>
+            </>
+          }
+        />
+      )}
 
       <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
 
@@ -468,7 +455,7 @@ useEffect(() => {
         </Section>
 
         {/* ── Submit ── */}
-        <div style={{ display: "flex", justifyContent: "flex-end", gap: 12, marginBottom: 40, background: "#fff" }}>
+        <div style={{ display: "flex", justifyContent: "flex-end", gap: 12, marginBottom: embedded ? 0 : 40, background: "#fff" }}>
           <button onClick={onCancel} style={{ ...cancelBtnStyle, background: "#fff", color: "#1976d2" }}>Cancel</button>
           <button onClick={handleSave} style={{ ...saveBtnStyle, background: "#1976d2", color: "#fff" }}>✅ Create Renewal</button>
         </div>
