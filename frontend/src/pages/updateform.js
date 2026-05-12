@@ -384,7 +384,7 @@ return (
         {showRenewalFields && (
           <>
         <Section title="Renewer Details" emoji="👤">
-          <div style={grid3}>
+          <div style={grid2}>
             <Field label="Renewer Name">
               <input value={form.renewerName} readOnly style={readOnly()} placeholder="Admin department head" />
             </Field>
@@ -470,6 +470,12 @@ return (
         {showRenewalFields && (
           <Section title="Payment & Other Details" emoji="💳">
             <div style={grid2}>
+              <Field label="Vendor">
+                <input value={form.vendor} onChange={e => set("vendor", e.target.value)} style={inp("")} placeholder="" />
+              </Field>
+              <Field label="Authority (if applicable)">
+                <input value={form.authority} onChange={e => set("authority", e.target.value)} style={inp("")} placeholder="" />
+              </Field>
               <Field label="Renewal Amount">
                 <input type="number" min="0" step="0.01" value={form.renewal_amount} onChange={(e) => set("renewal_amount", e.target.value)} style={inp("")} placeholder="0.00" />
               </Field>

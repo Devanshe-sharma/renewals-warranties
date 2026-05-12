@@ -43,6 +43,8 @@ const RenewalEventSchema = new mongoose.Schema(
     new_expiry_date: { type: Date },  // calculated: new_renewal_date + frequency
 
     // ── Payment & Other Details ───────────────────────
+    vendor:         { type: String, default: '', trim: true },
+    authority:        { type: String, default: '', trim: true },
     renewal_amount: { type: Number,  default: null },
     payment_mode: {
       type: String,

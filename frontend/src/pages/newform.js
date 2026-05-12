@@ -11,7 +11,7 @@ const DEFAULT_REMIND = {
 };
 
 const BLANK = {
-  itemName: "", category: "", subcategory: "", description: "", vendor: "", authority: "",
+  itemName: "", category: "", subcategory: "", description: "", 
   renewerName: "", renewerDepartment: "Admin", renewerEmail: "",
   selectedEmployeeId: "",
   empName: "", empId: "", department: "", designation: "",
@@ -176,25 +176,47 @@ useEffect(() => {
   };
 
   const handleSave = async () => {
-  if (!validate()) return;
-  try {
-    const res = await fetch(`${process.env.REACT_APP_API_URL}/api/renewals`, {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...form, endDate }),
-    });
-    const data = await res.json();
-    if (data.success) {
-      alert(`✅ Renewal created — ID: ${data.data.item_id}`);
-      onSave(data.data);
-    } else {
-      alert(`❌ Error: ${data.message}`);
+    if (!validate()) return;
+    try {
+      const res = await fetch(`${process.env.REACT_APP_API_URL}/api/renewals`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...form, endDate }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert(`✅ Renewal created — ID: ${data.data.item_id}`);
+        
+        // Send email notification when renewal is created
+        try {
+          const emailRes = await fetch(`${process.env.REACT_APP_API_URL}/api/send-email`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              to: form.email,
+              subject: `Renewal Created - ${form.itemName}`,
+              text: `A new renewal has been created with ID: ${data.data.item_id}.\n\nItem Name: ${form.itemName}\nCategory: ${form.category}\nStart Date: ${form.startDate}\nEnd Date: ${endDate}\n\nYou can view this renewal in the dashboard.`,
+            }),
+          });
+          
+          if (emailRes.success) {
+            console.log('Email sent successfully');
+          } else {
+            console.error('Failed to send email:', emailRes.message);
+          }
+        } catch (emailErr) {
+          console.error('Email sending error:', emailErr);
+        }
+        
+        onSave(data.data);
+      } else {
+        alert(`❌ Error: ${data.message}`);
+      }
+    } catch (err) {
+      alert('❌ Failed to save. Check your connection.');
+      console.error(err);
     }
-  } catch (err) {
-    alert('❌ Failed to save. Check your connection.');
-    console.error(err);
-  }
-};
+  };
 
   // ── Styles ────────────────────────────────────────────
   const inp = (name, extra = {}) => ({
@@ -269,19 +291,6 @@ useEffect(() => {
                 {words} / 150 words
               </div>
             </Field>
-          </div>
-
-          <div style={{ marginTop: 20 }}>
-            <div style={grid2}>
-              <Field label="Vendor">
-                <input value={form.vendor} onChange={e => set("vendor", e.target.value)}
-                  style={inp("")} placeholder="" />
-              </Field>
-              <Field label="Authority (if applicable)">
-                <input value={form.authority} onChange={e => set("authority", e.target.value)}
-                  style={inp("")} placeholder="" />
-              </Field>
-            </div>
           </div>
         </Section>
 

@@ -14,8 +14,6 @@ const NewrenewalSchema = new mongoose.Schema(
     category:    { type: String, required: true, trim: true },
     subcategory: { type: String, default: '', trim: true },
     description: { type: String, default: '', trim: true },
-    vendor:      { type: String, default: '', trim: true },
-    authority:   { type: String, default: '', trim: true },
 
     // ── Renewer Details ──────────────────────────────
     renewer_name:       { type: String, default: '' },
