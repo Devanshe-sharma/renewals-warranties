@@ -5,102 +5,236 @@ await sendMail({
 
   // CC PEOPLE
   cc: [
-    "management@briskolive.com",
-    renewal.email, // user email
+    "management@briskolive.com", "da.automation@briskolive.com",
+    renewal.email,
   ]
     .filter(Boolean)
     .join(","),
 
-  subject: `Renewal Created - ${renewal.item_name}`,
+  subject: `A Renewal Created - ${renewal.item_name}`,
 
   html: `
-    <div style="font-family: Arial, sans-serif; line-height: 1.6;">
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"/></head>
+<body style="margin:0;padding:0;background:#f4f6f9;font-family:Arial,sans-serif;">
 
-      <h2 style="color:#1976d2;">
-        ✅ Renewal Created Successfully
-      </h2>
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f6f9;padding:32px 0;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.08);">
 
-      <p>
-        A new renewal item has been created in the system.
-      </p>
+          <!-- HEADER -->
+          <tr>
+            <td style="background:#1976d2;padding:28px 36px;">
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td>
+                    <div style="font-size:22px;font-weight:700;color:#ffffff;letter-spacing:0.5px;">
+                      Brisk Olive
+                    </div>
+                    <div style="font-size:13px;color:#bbdefb;margin-top:4px;">
+                      Renewal Management System
+                    </div>
+                  </td>
+                  <td align="right">
+                    <div style="background:#ffffff;color:#1976d2;font-size:12px;font-weight:700;padding:6px 14px;border-radius:20px;">
+                      ✅ NEW RENEWAL
+                    </div>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
 
-      <hr/>
+          <!-- INTRO -->
+          <tr>
+            <td style="padding:28px 36px 8px;">
+              <p style="margin:0;font-size:15px;color:#374151;">
+                A new renewal item has been successfully created in the system.
+                Please find the details below.
+              </p>
+            </td>
+          </tr>
 
-      <h3>📋 Item Details</h3>
+          <!-- ITEM DETAILS SECTION -->
+          <tr>
+            <td style="padding:20px 36px 28px;">
 
-      <table cellpadding="6">
+              <div style="font-size:13px;font-weight:700;color:#1976d2;text-transform:uppercase;
+                          letter-spacing:1px;margin-bottom:14px;padding-bottom:8px;
+                          border-bottom:2px solid #e3f2fd;">
+                📋 Item Details
+              </div>
 
-        <tr>
-          <td><b>Item ID:</b></td>
-          <td>${renewal.item_id || "-"}</td>
-        </tr>
+              <table width="100%" cellpadding="0" cellspacing="0">
 
-        <tr>
-          <td><b>Category:</b></td>
-          <td>${renewal.category || "-"}</td>
-        </tr>
+                <!-- Item ID -->
+                <tr>
+                  <td width="40%" style="padding:10px 14px;background:#f8faff;
+                      border-radius:6px 0 0 0;font-size:13px;color:#6b7280;font-weight:600;">
+                    Item ID
+                  </td>
+                  <td style="padding:10px 14px;background:#f8faff;
+                      border-radius:0 6px 0 0;font-size:13px;color:#111827;font-weight:700;">
+                    ${renewal.item_id || "-"}
+                  </td>
+                </tr>
 
-        <tr>
-          <td><b>Subcategory:</b></td>
-          <td>${renewal.subcategory || "-"}</td>
-        </tr>
+                <tr><td colspan="2" style="height:2px;background:#ffffff;"></td></tr>
 
-        <tr>
-          <td><b>Item Name:</b></td>
-          <td>${renewal.item_name || "-"}</td>
-        </tr>
+                <!-- Category -->
+                <tr>
+                  <td style="padding:10px 14px;background:#f8faff;
+                      font-size:13px;color:#6b7280;font-weight:600;">
+                    Category
+                  </td>
+                  <td style="padding:10px 14px;background:#f8faff;
+                      font-size:13px;color:#111827;">
+                    ${renewal.category || "-"}
+                  </td>
+                </tr>
 
-        <tr>
-          <td><b>Description:</b></td>
-          <td>${renewal.description || "-"}</td>
-        </tr>
+                <tr><td colspan="2" style="height:2px;background:#ffffff;"></td></tr>
 
-        <tr>
-          <td><b>Renewer:</b></td>
-          <td>${renewal.renewer_name || "-"}</td>
-        </tr>
+                <!-- Subcategory -->
+                <tr>
+                  <td style="padding:10px 14px;background:#f8faff;
+                      font-size:13px;color:#6b7280;font-weight:600;">
+                    Subcategory
+                  </td>
+                  <td style="padding:10px 14px;background:#f8faff;
+                      font-size:13px;color:#111827;">
+                    ${renewal.subcategory || "-"}
+                  </td>
+                </tr>
 
-        <tr>
-          <td><b>User Department:</b></td>
-          <td>${renewal.user_department || "-"}</td>
-        </tr>
+                <tr><td colspan="2" style="height:2px;background:#ffffff;"></td></tr>
 
-        <tr>
-          <td><b>Renewer Contact Email:</b></td>
-          <td>${renewal.renewer_email || "-"}</td>
-        </tr>
+                <!-- Item Name -->
+                <tr>
+                  <td style="padding:10px 14px;background:#f8faff;
+                      font-size:13px;color:#6b7280;font-weight:600;">
+                    Item Name
+                  </td>
+                  <td style="padding:10px 14px;background:#f8faff;
+                      font-size:13px;color:#111827;font-weight:600;">
+                    ${renewal.item_name || "-"}
+                  </td>
+                </tr>
 
-        <tr>
-          <td><b>Start Date:</b></td>
-          <td>
-            ${
-              renewal.start_date
-                ? new Date(renewal.start_date).toLocaleDateString("en-IN")
-                : "-"
-            }
-          </td>
-        </tr>
+                <tr><td colspan="2" style="height:2px;background:#ffffff;"></td></tr>
 
-        <tr>
-          <td><b>Website Link:</b></td>
-          <td>
-            ${
-              renewal.link
-                ? `<a href="${renewal.link}" target="_blank">${renewal.link}</a>`
-                : "-"
-            }
-          </td>
-        </tr>
+                <!-- Description -->
+                <tr>
+                  <td style="padding:10px 14px;background:#f8faff;
+                      font-size:13px;color:#6b7280;font-weight:600;">
+                    Description
+                  </td>
+                  <td style="padding:10px 14px;background:#f8faff;
+                      font-size:13px;color:#111827;">
+                    ${renewal.description || "-"}
+                  </td>
+                </tr>
 
-      </table>
+                <tr><td colspan="2" style="height:2px;background:#ffffff;"></td></tr>
 
-      <br/>
+                <!-- Renewer -->
+                <tr>
+                  <td style="padding:10px 14px;background:#f8faff;
+                      font-size:13px;color:#6b7280;font-weight:600;">
+                    Renewer
+                  </td>
+                  <td style="padding:10px 14px;background:#f8faff;
+                      font-size:13px;color:#111827;">
+                    ${renewal.renewer_name || "-"}
+                  </td>
+                </tr>
 
-      <p>
-        Regards,<br/>
-        Brisk Olive Admin
-      </p>
+                <tr><td colspan="2" style="height:2px;background:#ffffff;"></td></tr>
 
-    </div>
-  `,
+                <!-- User Department -->
+                <tr>
+                  <td style="padding:10px 14px;background:#f8faff;
+                      font-size:13px;color:#6b7280;font-weight:600;">
+                    User Department
+                  </td>
+                  <td style="padding:10px 14px;background:#f8faff;
+                      font-size:13px;color:#111827;">
+                    ${renewal.department || renewal.user_department || "-"}
+                  </td>
+                </tr>
+
+                <tr><td colspan="2" style="height:2px;background:#ffffff;"></td></tr>
+
+                <!-- Renewer Contact Email -->
+                <tr>
+                  <td style="padding:10px 14px;background:#f8faff;
+                      font-size:13px;color:#6b7280;font-weight:600;">
+                    Renewer Contact Email
+                  </td>
+                  <td style="padding:10px 14px;background:#f8faff;
+                      font-size:13px;color:#1976d2;">
+                    <a href="mailto:${renewal.renewer_email}" style="color:#1976d2;text-decoration:none;">
+                      ${renewal.renewer_email || "-"}
+                    </a>
+                  </td>
+                </tr>
+
+                <tr><td colspan="2" style="height:2px;background:#ffffff;"></td></tr>
+
+                <!-- Start Date -->
+                <tr>
+                  <td style="padding:10px 14px;background:#f8faff;
+                      font-size:13px;color:#6b7280;font-weight:600;">
+                    Start Date
+                  </td>
+                  <td style="padding:10px 14px;background:#f8faff;
+                      font-size:13px;color:#111827;">
+                    ${renewal.start_date ? new Date(renewal.start_date).toLocaleDateString("en-IN", { day:"numeric", month:"long", year:"numeric" }) : "-"}
+                  </td>
+                </tr>
+
+                <tr><td colspan="2" style="height:2px;background:#ffffff;"></td></tr>
+
+                <!-- Website Link -->
+                <tr>
+                  <td style="padding:10px 14px;background:#f8faff;
+                      border-radius:0 0 0 6px;font-size:13px;color:#6b7280;font-weight:600;">
+                    Website Link
+                  </td>
+                  <td style="padding:10px 14px;background:#f8faff;
+                      border-radius:0 0 6px 0;font-size:13px;">
+                    ${renewal.link
+                      ? `<a href="${renewal.link}" target="_blank"
+                            style="color:#1976d2;text-decoration:none;font-weight:600;">
+                            🔗 Visit Link
+                         </a>`
+                      : "-"}
+                  </td>
+                </tr>
+
+              </table>
+            </td>
+          </tr>
+
+          <!-- FOOTER -->
+          <tr>
+            <td style="background:#f8faff;padding:20px 36px;border-top:1px solid #e5e7eb;">
+              <p style="margin:0;font-size:12px;color:#9ca3af;line-height:1.8;">
+                This is an automated notification from the Brisk Olive Renewal Management System.<br/>
+                <b style="color:#6b7280;">Thanks & Regards</b><br/>
+                <span style="color:#1976d2;font-weight:700;">Brisk Olive Admin Team</span>
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+
+</body>
+</html>
+`,
 });
