@@ -8,13 +8,12 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-const sendMail = async ({ to, subject, html }) => {
-  await transporter.sendMail({
-    from: `"Renewal System" <${process.env.EMAIL_USER}>`,
-    to,
-    subject,
-    html,
-  });
-};
+await transporter.sendMail({
+  from: "admin@briskolive.com",
+  to,
+  cc,
+  subject,
+  html,
+});
 
 module.exports = sendMail;

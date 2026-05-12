@@ -187,26 +187,6 @@ useEffect(() => {
       if (data.success) {
         alert(`✅ Renewal created — ID: ${data.data.item_id}`);
         
-        // Send email notification when renewal is created
-        try {
-          const emailRes = await fetch(`${process.env.REACT_APP_API_URL}/api/send-email`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              to: form.email,
-              subject: `Renewal Created - ${form.itemName}`,
-              text: `A new renewal has been created with ID: ${data.data.item_id}.\n\nItem Name: ${form.itemName}\nCategory: ${form.category}\nStart Date: ${form.startDate}\nEnd Date: ${endDate}\n\nYou can view this renewal in the dashboard.`,
-            }),
-          });
-          
-          if (emailRes.success) {
-            console.log('Email sent successfully');
-          } else {
-            console.error('Failed to send email:', emailRes.message);
-          }
-        } catch (emailErr) {
-          console.error('Email sending error:', emailErr);
-        }
         
         onSave(data.data);
       } else {
