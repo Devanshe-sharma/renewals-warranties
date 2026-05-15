@@ -2,7 +2,8 @@ const express = require('express');
 const router  = express.Router();
 const Newrenewal = require('../models/Newrenewal');
 const Employee = require('../models/Employee');
-const sendMail = require("../utils/sendMail");
+// const sendMail = require("../utils/sendMail");
+const sendRenewalCreatedMail = require("../utils/mailer/services/sendRenewalCreatedMail");
 
 // ── Helper: calculate reminder dates ─────────────────────
 function calcReminderDates(endDate, r1, r2, rf) {
@@ -102,41 +103,23 @@ router.post('/', async (req, res) => {
     });
 
     const saved = await renewal.save();
-
     try {
-      await sendMail({
-        to: "admin@briskolive.com",
-        cc: [
-          "software.developer@briskolive.com",
-          saved.email,
-        ].filter(Boolean).join(","),
-        subject: `Renewal Created - ${saved.item_name}`,
-        html: `
-          <div style="font-family: Arial, sans-serif; line-height: 1.6;">
-            <h2 style="color:#1976d2;">✅ Renewal Created Successfully</h2>
-            <p>A new renewal item has been created in the system.</p>
-            <hr/>
-            <h3>📋 Item Details</h3>
-            <table cellpadding="6">
-              <tr><td><b>Item ID:</b></td><td>${saved.item_id || "-"}</td></tr>
-              <tr><td><b>Category:</b></td><td>${saved.category || "-"}</td></tr>
-              <tr><td><b>Subcategory:</b></td><td>${saved.subcategory || "-"}</td></tr>
-              <tr><td><b>Item Name:</b></td><td>${saved.item_name || "-"}</td></tr>
-              <tr><td><b>Description:</b></td><td>${saved.description || "-"}</td></tr>
-              <tr><td><b>Renewer:</b></td><td>${saved.renewer_name || "-"}</td></tr>
-              <tr><td><b>Renewer Email:</b></td><td>${saved.renewer_email || "-"}</td></tr>
-              <tr><td><b>Start Date:</b></td><td>${saved.start_date ? new Date(saved.start_date).toLocaleDateString("en-IN") : "-"}</td></tr>
-              <tr><td><b>End Date:</b></td><td>${saved.end_date ? new Date(saved.end_date).toLocaleDateString("en-IN") : "-"}</td></tr>
-              <tr><td><b>Website Link:</b></td><td>${saved.link ? `<a href="${saved.link}">${saved.link}</a>` : "-"}</td></tr>
-            </table>
-            <br/>
-            <p>Regards,<br/>Brisk Olive Admin</p>
-          </div>
-        `,
-      });
-    
-    } catch (mailErr) {
-  console.error("Mail send error:", mailErr); // full error object, not just .message
+
+  const mailInfo = await sendRenewalCreatedMail(saved);
+
+  console.log("=================================");
+  console.log("✅ RENEWAL CREATED MAIL SENT");
+  console.log("ITEM:", saved.item_name);
+  console.log("ACCEPTED:", mailInfo.accepted);
+  console.log("REJECTED:", mailInfo.rejected);
+  console.log("MESSAGE ID:", mailInfo.messageId);
+  console.log("=================================");
+
+} catch (mailErr) {
+
+  console.error("❌ Renewal Created Mail Error:");
+  console.error(mailErr);
+
 }
 
     res.status(201).json({ success: true, data: saved });

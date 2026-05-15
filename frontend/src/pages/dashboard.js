@@ -135,6 +135,7 @@ const mapRenewal = (r) => ({
   isClosed:           r.is_closed            ?? false,
   closedAt:           r.closed_at            || null,
   pastRenewals:       r.past_renewals        || [],
+  createdAt:          r.createdAt            || null,
 });
 
 function buildLatestEventMap(events) {
@@ -814,13 +815,27 @@ export default function Dashboard({ categories = [], onNew, onEdit, onSelect, on
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
               <tr style={{ background: "#F9FAFB" }}>
-                <TH>ID Item</TH><TH>Item</TH><TH>Category</TH><TH>Vendor</TH>
-                {tab === "active" ? (
-                  <><TH>Renewer</TH><TH>Service start date</TH><TH>Status</TH><TH>Action</TH></>
-                ) : (
-                  <><TH>Responsible</TH><TH>Closed On</TH><TH></TH></>
-                )}
-              </tr>
+                  <TH>Item ID</TH>
+                  <TH>Item</TH>
+                  <TH>Category</TH>
+
+                  {tab === "active" ? (
+                    <>
+                      <TH>Renewer</TH>
+                      <TH>Service Start</TH>
+                      <TH>Status</TH>
+                      <TH>Action</TH>
+                    </>
+                  ) : (
+                    <>
+                      <TH>Responsible</TH>
+                      <TH>Closed On</TH>
+                      <TH></TH>
+                    </>
+                  )}
+
+                  <TH>Recorded On</TH>
+                </tr>
             </thead>
             <tbody>
               {visible.map(r => {
@@ -838,7 +853,7 @@ export default function Dashboard({ categories = [], onNew, onEdit, onSelect, on
                       <div style={{ fontSize: 11, color: "#9CA3AF", marginTop: 1 }}>{r.subcategory}</div>
                     </td>
                     <td style={{ padding: "13px 16px", fontSize: 13, color: "#374151" }}>{r.category}</td>
-                    <td style={{ padding: "13px 16px", fontSize: 13, color: "#374151" }}>{r.vendor}</td>
+                    
                     {tab === "active" ? (
                       <>
                         <td style={{ padding: "13px 16px", fontSize: 13, color: "#374151" }}>{r.responsible}</td>
@@ -855,6 +870,12 @@ export default function Dashboard({ categories = [], onNew, onEdit, onSelect, on
                             Edit
                           </button>
                         </td>
+                        <td style={{ padding: "13px 16px", fontSize: 12, color: "#374151" }}>
+                        <div>{r.createdAt ? new Date(r.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "—"}</div>
+                        <div style={{ fontSize: 11, color: "#9CA3AF", marginTop: 1 }}>
+                          {r.createdAt ? new Date(r.createdAt).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }) : ""}
+                        </div>
+                      </td>
                       </>
                     ) : (
                       <>

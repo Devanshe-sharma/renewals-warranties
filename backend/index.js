@@ -1,4 +1,5 @@
 require('dotenv').config();
+require("./cron/renewalReminderCron");
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -21,6 +22,7 @@ app.use('/api/categories', categoryRoutes);
 app.use('/api/renewals', renewalRoutes);
 app.use('/api/renewal-events', updaterenewalRoute);
 app.use('/api/status-rules', statusRulesRoutes);
+// app.use("/api/test", require("./routes/testMail"));
 
 mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log('MongoDB connected'))
