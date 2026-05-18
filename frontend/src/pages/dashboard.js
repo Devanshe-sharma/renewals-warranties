@@ -749,10 +749,10 @@ export default function Dashboard({ categories = [], onNew, onEdit, onSelect, on
           tab === "active" ? (
             <div style={{ display: "flex", gap: 10 }}>
               {/* <NavbarButton onClick={onNavigateUpdateForm} label="✏️ Update Renewal" variant="secondary" /> */}
-              <NavbarButton onClick={() => setCreateMode(true)} icon="+" label="Create Renewal List" />
+              <NavbarButton onClick={() => setCreateMode(true)} icon="+" label="Create a Renewal" />
             </div>
           ) : (
-            <NavbarButton onClick={() => setCreateMode(true)} icon="+" label="Create Renewal List" />
+            <NavbarButton onClick={() => setCreateMode(true)} icon="+" label="Create a Renewal" />
           )
         }
       />
@@ -925,7 +925,7 @@ export default function Dashboard({ categories = [], onNew, onEdit, onSelect, on
           <div onClick={e => e.stopPropagation()} style={{ background: "#F3F4F6", borderRadius: 16, width: "100%", maxWidth: 940, maxHeight: "90vh", overflowY: "auto", boxShadow: "0 24px 64px rgba(0,0,0,0.25)" }}>
             <div style={{ background: LIME, borderRadius: "16px 16px 0 0", padding: "16px 24px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
               <div>
-                <div style={{ fontSize: 15, fontWeight: 700, color: "#fff" }}>Create Renewal List</div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: "#fff" }}>Create a Renewal</div>
                 <div style={{ fontSize: 12, color: "#bfdbfe", marginTop: 2 }}>Add a new renewal or warranty record</div>
               </div>
               <button onClick={() => setCreateMode(false)} style={{ background: "rgba(255,255,255,0.2)", border: "none", borderRadius: 8, width: 32, height: 32, cursor: "pointer", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff" }}>✕</button>

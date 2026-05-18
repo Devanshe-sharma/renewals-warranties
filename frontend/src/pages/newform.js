@@ -12,7 +12,8 @@ const DEFAULT_REMIND = {
 
 const BLANK = {
   itemName: "", category: "", subcategory: "", description: "", 
-  renewerName: "", renewerDepartment: "Admin", renewerEmail: "",
+  selectedRenewerId: "",
+  renewerName: "", renewerDepartment: "", renewerEmail: "",
   selectedEmployeeId: "",
   empName: "", empId: "", department: "", designation: "",
   email: "", reportingManager: "",
@@ -27,19 +28,6 @@ const addDays   = (d, n) => { const r = new Date(d); r.setDate(r.getDate() + n);
 const addMonths = (d, n) => { const r = new Date(d); r.setMonth(r.getMonth() + n); return r; };
 const fmtISO    = (d)    => d ? new Date(d).toISOString().split("T")[0] : "";
 const fmtDate   = (d)    => d ? new Date(d).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "";
-
-const getAdminUser = (employees) => {
-  const user = employees.find((emp) =>
-    (emp.Department || "").trim().toLowerCase().includes("admin") &&
-    ((emp["Department Head"] || "").trim() || (emp["Dept Head Email"] || "").trim())
-  );
-
-  return {
-    renewerName: user?.["Department Head"] || user?.Emp_name || "",
-    renewerDepartment: "Admin",
-    renewerEmail: user?.["Dept Head Email"] || user?.["desig Email Id"] || "",
-  };
-};
 
 export default function NewForm({ onSave, onCancel, embedded = false }) {
   const [form,       setForm]       = useState(BLANK);
@@ -104,7 +92,6 @@ useEffect(() => {
         console.log("Employees loaded:", data.length);
         console.log("Sample:", data[0]);
         setEmployees(data);
-        setForm(f => ({ ...f, ...getAdminUser(data) }));
       })
       .catch(err => console.error("Employee fetch error:", err));
   }, []);
@@ -112,6 +99,9 @@ useEffect(() => {
   // ── Derived ───────────────────────────────────────────
   const selectedCategory = categories.find(c => c.name === form.category);
   const subcats = selectedCategory?.subcategories || [];
+  const sortedEmployees = [...employees].sort((a, b) =>
+    (a.Emp_name || "").localeCompare(b.Emp_name || "")
+  );
 
   const endDate = form.startDate && form.frequency
     ? fmtISO(addMonths(new Date(form.startDate), FREQ_MONTHS[form.frequency] || 12))
@@ -140,6 +130,26 @@ useEffect(() => {
   }, [form.frequency]);
 
   // ── Employee select → autofill ────────────────────────
+  const handleRenewerSelect = (id) => {
+    const emp = employees.find(e => e._id === id);
+    if (!emp) {
+      setForm(f => ({
+        ...f,
+        selectedRenewerId: "",
+        renewerName: "", renewerDepartment: "", renewerEmail: "",
+      }));
+      return;
+    }
+
+    setForm(f => ({
+      ...f,
+      selectedRenewerId: id,
+      renewerName:       emp.Emp_name          || "",
+      renewerDepartment: emp.Department        || "",
+      renewerEmail:      emp["desig Email Id"] || "",
+    }));
+  };
+
   const handleEmployeeSelect = (id) => {
     const emp = employees.find(e => e._id === id);
     if (!emp) {
@@ -278,13 +288,22 @@ useEffect(() => {
         <Section title="Renewer Details" emoji="👤">
           <div style={grid3}>
             <Field label="Renewer Name">
-              <input value={form.renewerName} readOnly style={readOnly()} placeholder="Admin department head" />
+              <select
+                value={form.selectedRenewerId}
+                onChange={e => handleRenewerSelect(e.target.value)}
+                style={sel("")}
+              >
+                <option value="">Select renewer</option>
+                {sortedEmployees.map(em => (
+                  <option key={em._id} value={em._id}>{em.Emp_name}</option>
+                ))}
+              </select>
             </Field>
             <Field label="Renewer Department">
-              <input value={form.renewerDepartment} readOnly style={readOnly()} />
+              <input value={form.renewerDepartment} readOnly style={readOnly()} placeholder="Auto-filled" />
             </Field>
             <Field label="Renewer Email">
-              <input value={form.renewerEmail} readOnly style={readOnly()} placeholder="Admin dept head email" />
+              <input value={form.renewerEmail} readOnly style={readOnly()} placeholder="Auto-filled" />
             </Field>
           </div>
         </Section>
@@ -296,7 +315,7 @@ useEffect(() => {
               <select value={form.selectedEmployeeId}
                 onChange={e => handleEmployeeSelect(e.target.value)} style={sel("")}>
                 <option value="">Select employee</option>
-                {employees.sort((a, b) => a.Emp_name.localeCompare(b.Emp_name)).map(em => (
+                {sortedEmployees.map(em => (
                   <option key={em._id} value={em._id}>{em.Emp_name}</option>
                 ))}
               </select>

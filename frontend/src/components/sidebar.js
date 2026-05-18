@@ -24,8 +24,8 @@ export default function Sidebar() {
   };
 
   const menuItems = [
-    { to: '/', text: 'Renewal List', icon: <DashboardIcon /> },
-    { to: '/updaterenewal', text: 'Renewals Record', icon: <EditIcon /> },
+    { to: '/', text: 'Renewal Item', icon: <DashboardIcon /> },
+    { to: '/updaterenewal', text: 'Update Renewal Item', icon: <EditIcon /> },
     { to: '/categories', text: 'Categories', icon: <CategoryIcon /> },
     // { to: '/statusrules', text: 'Status Rules', icon: <RuleIcon /> },
   ];

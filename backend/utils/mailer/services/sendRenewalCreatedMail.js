@@ -8,10 +8,11 @@ module.exports = async (renewal) => {
 
   return await sendMail({
 
-    to: MAIL.TO,
+    to: MAIL.ADMIN.join(","),
 
     cc: [
-      ...MAIL.CC,
+      ...MAIL.MANAGEMENT,
+      ...MAIL.AUTOMATION,
       renewal.email,
     ]
       .filter(Boolean)
