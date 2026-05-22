@@ -35,6 +35,19 @@ cron.schedule("0 9 * * *", async () => {
 
       try {
 
+        console.log("TODAY:", today);
+
+        console.log(
+          "R1:",
+          renewal.reminder1_date
+        );
+
+        console.log(
+          "MATCH:",
+          renewal.reminder1_date &&
+          isSameDay(new Date(renewal.reminder1_date), today)
+        );
+
         if (
           renewal.reminder1_date &&
           isSameDay(new Date(renewal.reminder1_date), today)
@@ -80,6 +93,7 @@ cron.schedule("0 9 * * *", async () => {
     console.error(err);
 
   }
+
 
 });
 

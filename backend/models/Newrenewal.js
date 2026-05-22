@@ -89,6 +89,26 @@ NewrenewalSchema.pre('save', async function (next) {
   }
 });
 
+NewrenewalSchema.pre("save", function (next) {
+
+  if (this.end_date) {
+
+    const r1 = new Date(this.end_date);
+    r1.setDate(r1.getDate() - (this.reminder1_days || 30));
+    this.reminder1_date = r1;
+
+    const r2 = new Date(this.end_date);
+    r2.setDate(r2.getDate() - (this.reminder2_days || 10));
+    this.reminder2_date = r2;
+
+    const rf = new Date(this.end_date);
+    rf.setDate(rf.getDate() - (this.reminder_final_days || 1));
+    this.reminder_final_date = rf;
+  }
+
+  next();
+});
+
 // ── Indexes ──────────────────────────────────────────────
 NewrenewalSchema.index({ item_id: 1 });
 NewrenewalSchema.index({ category: 1 });

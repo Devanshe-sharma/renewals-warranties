@@ -2,7 +2,7 @@ const express = require('express');
 const router  = express.Router();
 const Newrenewal = require('../models/Newrenewal');
 const Employee = require('../models/Employee');
-// const sendMail = require("../utils/sendMail");
+// const sendMail = require("../../sendMail");
 const sendRenewalCreatedMail = require("../utils/mailer/services/sendRenewalCreatedMail");
 
 // ── Helper: calculate reminder dates ─────────────────────

@@ -1,4 +1,4 @@
-const sendMail = require("../utils/sendMail");
+const sendMail = require("../../sendMail");
 
 try {
   const ccList = [
