@@ -8,8 +8,23 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-const sendMail = async ({ to, cc, subject, html }) => {
+// Verify transporter once on startup
+transporter.verify((error, success) => {
+  if (error) {
+    console.error("❌ MAIL SERVER CONNECTION FAILED");
+    console.error(error);
+  } else {
+    console.log("✅ MAIL SERVER READY");
+  }
+});
+
+const sendMail = async ({ to, cc = [], subject, html }) => {
   try {
+
+    if (!to) {
+      throw new Error("Recipient email is missing");
+    }
+
     console.log("=================================");
     console.log("📨 SENDING MAIL");
     console.log("TO:", to);
@@ -17,13 +32,15 @@ const sendMail = async ({ to, cc, subject, html }) => {
     console.log("SUBJECT:", subject);
     console.log("=================================");
 
-    const info = await transporter.sendMail({
+    const mailOptions = {
       from: `"Brisk Olive RMS" <${process.env.EMAIL_USER}>`,
       to,
-      cc,
+      cc: Array.isArray(cc) ? cc.join(",") : cc,
       subject,
       html,
-    });
+    };
+
+    const info = await transporter.sendMail(mailOptions);
 
     console.log("✅ MAIL SENT SUCCESSFULLY");
     console.log("ACCEPTED:", info.accepted);
@@ -32,13 +49,21 @@ const sendMail = async ({ to, cc, subject, html }) => {
     console.log("MESSAGE ID:", info.messageId);
     console.log("=================================");
 
-    return info;
+    return {
+      success: true,
+      info,
+    };
+
   } catch (err) {
+
     console.error("❌ MAIL SEND FAILED");
     console.error(err);
     console.log("=================================");
 
-    throw err;
+    return {
+      success: false,
+      error: err.message,
+    };
   }
 };
 
