@@ -43,8 +43,8 @@ function AppContent() {
 
       <main
         style={{
-          marginLeft: 260,
-          padding: "32px 36px",
+          marginLeft: 200,
+          padding: "2px 0px",
           minHeight: "100vh",
           boxSizing: "border-box",
         }}

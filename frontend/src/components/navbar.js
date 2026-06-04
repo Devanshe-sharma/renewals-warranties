@@ -4,7 +4,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import Brightness4Icon from '@mui/icons-material/Brightness4';
 import Brightness7Icon from '@mui/icons-material/Brightness7';
 
-const drawerWidth = 260;
+const drawerWidth = 200;
 
 const pageTitles = {
   '/': 'Dashboard',

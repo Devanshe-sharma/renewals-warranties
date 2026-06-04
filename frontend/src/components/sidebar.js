@@ -13,7 +13,7 @@ import {
 } from '@mui/icons-material';
 import { useLocation, Link } from 'react-router-dom';
 
-const drawerWidth = 260;
+const drawerWidth = 200;
 const BRAND_BLUE = '#1976d2';
 
 export default function Sidebar() {
@@ -24,8 +24,8 @@ export default function Sidebar() {
   };
 
   const menuItems = [
-    { to: '/', text: 'Renewal Item', icon: <DashboardIcon /> },
-    { to: '/updaterenewal', text: 'Update Renewal Item', icon: <EditIcon /> },
+    { to: '/', text: 'Renewal Items Master', icon: <DashboardIcon /> },
+    { to: '/updaterenewal', text: 'Renewals Records', icon: <EditIcon /> },
     { to: '/categories', text: 'Categories', icon: <CategoryIcon /> },
     // { to: '/statusrules', text: 'Status Rules', icon: <RuleIcon /> },
   ];

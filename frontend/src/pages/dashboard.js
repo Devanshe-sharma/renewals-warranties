@@ -32,6 +32,22 @@ const fmtCurr     = (n) => n != null && n !== "" ? `₹ ${Number(n).toLocaleStri
 const daysBetween = (a, b) => Math.round((new Date(b) - new Date(a)) / 86400000);
 const toDay       = (d) => { const x = new Date(d); x.setHours(0,0,0,0); return x; };
 
+
+
+const actionBtn = {
+  border: "none",
+  borderRadius: 5,
+  padding: "4px 4px",
+  fontSize: 11,
+  fontWeight: 600,
+  cursor: "pointer",
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 4,
+  whiteSpace: "nowrap",
+  lineHeight: 1.2,
+};
+
 // ────────────────────────────────────────────────────────
 // computeStatus
 // ────────────────────────────────────────────────────────
@@ -79,9 +95,9 @@ function DaysChip({ endDate }) {
 
 function StatsCard({ label, value, sub, accent }) {
   return (
-    <div style={{ background: "#fff", borderRadius: 12, padding: "20px 24px", boxShadow: "0 1px 4px rgba(0,0,0,0.07)", borderLeft: `3px solid ${accent || LIME}` }}>
-      <div style={{ fontSize: 30, fontWeight: 800, color: "#111", lineHeight: 1 }}>{value}</div>
-      <div style={{ fontSize: 13, fontWeight: 600, color: "#374151", marginTop: 4 }}>{label}</div>
+    <div style={{ background: "#fff", borderRadius: 12, padding: "16px 20px", boxShadow: "0 1px 4px rgba(0,0,0,0.07)", borderLeft: `3px solid ${accent || LIME}` }}>
+      <div style={{ fontSize: 15, fontWeight: 800, color: "#111", lineHeight: 1 }}>{value}</div>
+      <div style={{ fontSize: 13, fontWeight: 600, color: "#374151", marginTop: 6 }}>{label}</div>
       {sub && <div style={{ fontSize: 11, color: "#9CA3AF", marginTop: 3 }}>{sub}</div>}
     </div>
   );
@@ -95,6 +111,7 @@ function TH({ children }) {
   );
 }
 
+
 // ── Map DB renewal → frontend ─────────────────────────────
 const mapRenewal = (r) => ({
   id:                 r.item_id,
@@ -103,7 +120,7 @@ const mapRenewal = (r) => ({
   subcategory:        r.subcategory          || "",
   description:        r.description          || "",
   vendor:             r.vendor               || "",
-  authority:          r.authority            || "",
+  // authority:          r.authority            || "",
   renewerName:        r.renewer_name         || r.emp_name || "",
   renewerDepartment:  r.renewer_department   || r.department || "Admin",
   renewerEmail:       r.renewer_email        || r.email || "",
@@ -149,7 +166,7 @@ function buildLatestEventMap(events) {
 // ── Detail view helpers ───────────────────────────────────
 function DetailSection({ title, children }) {
   return (
-    <div style={{ border: "1px solid #F3F4F6", borderRadius: 10, overflow: "hidden" }}>
+    <div style={{ border: "1px solid #F3F4F6", borderRadius: 10, overflow: "visible" }}>
       <div style={{ background: "#F9FAFB", padding: "8px 16px", fontSize: 12, fontWeight: 700, color: "#374151", borderBottom: "1px solid #F3F4F6" }}>{title}</div>
       <div style={{ padding: 16 }}>{children}</div>
     </div>
@@ -332,8 +349,12 @@ function HistoryModal({ renewal, onClose, onEdit }) {
                       return (
                         <tr key={ev._id}
                           style={{ borderBottom: "1px solid #F9FAFB", background: isLatest ? "#EFF6FF" : "transparent" }}
-                          onMouseEnter={e => e.currentTarget.style.background = "#F9FAFB"}
-                          onMouseLeave={e => e.currentTarget.style.background = isLatest ? "#EFF6FF" : "transparent"}
+                          onMouseEnter={(e) => {
+                              e.currentTarget.style.filter = "brightness(0.97)";
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.filter = "none";
+                            }}
                         >
                           <td style={{ padding: "11px 14px" }}>
                             <div style={{ fontSize: 11, color: "#9CA3AF", fontFamily: "monospace" }}>{ev.event_id}</div>
@@ -681,6 +702,7 @@ export default function Dashboard({ categories = [], onNew, onEdit, onSelect, on
   const [editMode,        setEditMode]        = useState(null);
   const [createMode,      setCreateMode]      = useState(false);
   const [tab,             setTab]             = useState("active");
+  const [discontinueItem, setDiscontinueItem] = useState(null);
 
   const fetchRenewals = useCallback(async () => {
     try {
@@ -704,6 +726,35 @@ export default function Dashboard({ categories = [], onNew, onEdit, onSelect, on
     }
   }, []);
 
+  const handleDiscontinue = async (renewal) => {
+  const confirmed = window.confirm(
+    `Are you sure you want to discontinue "${renewal.itemName}"?\n\nThis action will move the renewal to Archive.`
+  );
+
+  if (!confirmed) return;
+
+  try {
+    const res = await fetch(
+      `${API}/api/renewals/${renewal.id}/archive`,
+      {
+        method: "POST",
+      }
+    );
+
+    const data = await res.json();
+
+    if (data.success) {
+      alert("✅ Renewal discontinued successfully");
+      fetchRenewals();
+    } else {
+      alert(data.message || "Failed to discontinue renewal");
+    }
+  } catch (err) {
+    console.error(err);
+    alert("Failed to discontinue renewal");
+  }
+};
+
   useEffect(() => { fetchRenewals(); }, [fetchRenewals]);
 
   const handleCreateSaved = () => {
@@ -718,17 +769,44 @@ export default function Dashboard({ categories = [], onNew, onEdit, onSelect, on
   }, {});
 
   const visible = (tab === "archived" ? archived : renewals).filter((r) => {
-    const q           = search.toLowerCase();
-    const name        = (r.itemName    || "").toLowerCase();
-    const vendor      = (r.vendor      || "").toLowerCase();
-    const responsible = (r.responsible || "").toLowerCase();
-    const s           = computeStatus(r, latestEventMap[r.id] ?? null);
-    return (
-      (!q || name.includes(q) || vendor.includes(q) || responsible.includes(q)) &&
-      (tab === "archived" || statusF === "all" || s === statusF) &&
-      (catF === "all" || r.category === catF)
-    );
-  });
+  const q = search.toLowerCase().trim();
+
+  const itemName = (r.itemName || "").toLowerCase();
+  const vendor = (r.vendor || "").toLowerCase();
+  const responsible = (r.responsible || "").toLowerCase();
+  const empName = (r.empName || "").toLowerCase();
+  const renewerName = (r.renewerName || "").toLowerCase();
+
+  const status = computeStatus(r, latestEventMap[r.id] ?? null);
+
+  const matchesSearch =
+    !q ||
+    itemName.includes(q) ||
+    vendor.includes(q) ||
+    responsible.includes(q) ||
+    empName.includes(q) ||
+    renewerName.includes(q);
+
+  const matchesStatus =
+    tab !== "active" ||
+    statusF === "all" ||
+    status === statusF;
+
+  const matchesCategory =
+    catF === "all" ||
+    r.category === catF;
+
+  const matchesEmployee =
+    employeeF === "all" ||
+    r.empName === employeeF;
+
+  return (
+    matchesSearch &&
+    matchesStatus &&
+    matchesCategory &&
+    matchesEmployee
+  );
+});
 
   if (loading) {
     return (
@@ -758,7 +836,7 @@ export default function Dashboard({ categories = [], onNew, onEdit, onSelect, on
       />
 
       {/* ── Stats ── */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(5,1fr)", gap: 14, marginBottom: 28 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(5,1fr)", gap: 14, marginBottom: 0 }}>
         <StatsCard label="Total"        value={renewals.length}               accent={LIME}     />
         <StatsCard label="Not Yet Due"  value={statusCounts.not_yet_due || 0} accent="#E5E7EB"  />
         <StatsCard label="Due"          value={statusCounts.due         || 0} accent="#9CA3AF"  />
@@ -794,16 +872,44 @@ export default function Dashboard({ categories = [], onNew, onEdit, onSelect, on
             <option value="overdue">Overdue</option>
           </select>
         )}
-        <select value={catF} onChange={e => setCatF(e.target.value)} style={selectStyle}>
-          <option value="all">All Categories</option>
-          {categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
-        </select>
-        <select value={employeeF} onChange={e => setEmployeeF(e.target.value)} style={selectStyle}>
-          <option value="all">All Users</option>
-          {[...new Set([...renewals, ...archived])].filter(r => r.empName).map(r => r.empName).filter((v, i, arr) => arr.indexOf(v) === i).sort().map(employee => (
-            <option key={employee} value={employee}>{employee}</option>
-          ))}
-        </select>
+        <select
+            value={catF}
+            onChange={(e) => setCatF(e.target.value)}
+            style={selectStyle}
+          >
+            <option value="all">All Categories</option>
+
+            {[...new Set(
+              [...renewals, ...archived]
+                .map(r => r.category)
+                .filter(Boolean)
+            )]
+              .sort()
+              .map(category => (
+                <option key={category} value={category}>
+                  {category}
+                </option>
+              ))}
+          </select>
+        <select
+                value={employeeF}
+                onChange={(e) => setEmployeeF(e.target.value)}
+                style={selectStyle}
+              >
+                <option value="all">All Users</option>
+
+                {[...new Set(
+                  [...renewals, ...archived]
+                    .map(r => r.empName)
+                    .filter(Boolean)
+                )]
+                  .sort()
+                  .map(employee => (
+                    <option key={employee} value={employee}>
+                      {employee}
+                    </option>
+                  ))}
+              </select>
         {(search || statusF !== "all" || catF !== "all" || employeeF !== "all") && (
           <button onClick={() => { setSearch(""); setStatusF("all"); setCatF("all"); setEmployeeF("all"); }} style={clearBtnStyle}>Clear</button>
         )}
@@ -823,6 +929,7 @@ export default function Dashboard({ categories = [], onNew, onEdit, onSelect, on
                     <>
                       <TH>Renewer</TH>
                       <TH>Service Start</TH>
+                      <TH>Next Renewal Date</TH>
                       <TH>Status</TH>
                       <TH>Action</TH>
                     </>
@@ -840,36 +947,146 @@ export default function Dashboard({ categories = [], onNew, onEdit, onSelect, on
             <tbody>
               {visible.map(r => {
                 const status = computeStatus(r, latestEventMap[r.id] ?? null);
+                const rowColors = {
+                    done: "#ECFDF5",
+                    done_delayed: "#FEFCE8",
+                    due: "#F3F4F6",
+                    overdue: "#FEF2F2",
+                    not_yet_due: "#FFFFFF"
+                  };
                 return (
-                  <tr key={r.id}
-                    onClick={() => setHistoryMode(r)}
-                    style={{ borderBottom: "1px solid #F9FAFB", cursor: "pointer", transition: "background 0.1s" }}
-                    onMouseEnter={e => e.currentTarget.style.background = "#FAFAFA"}
-                    onMouseLeave={e => e.currentTarget.style.background = "transparent"}
-                  >
+                      <tr
+                        key={r.id}
+                        onClick={() => setHistoryMode(r)}
+                        style={{
+                          background: rowColors[status] || "#FFFFFF",
+                          borderBottom: "1px solid #E5E7EB",
+                          cursor: "pointer",
+                          transition: "all 0.15s ease"
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.filter = "brightness(0.98)";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.filter = "none";
+                        }}
+                      >
                     <td style={{ padding: "13px 16px", fontSize: 12, color: "#9CA3AF", fontFamily: "monospace" }}>{r.id}</td>
                     <td style={{ padding: "13px 16px" }}>
-                      <div style={{ fontWeight: 600, fontSize: 14, color: "#111" }}>{r.itemName}</div>
+                      <div style={{ fontWeight: 600, fontSize: 12, color: "#111" }}>{r.itemName}</div>
                       <div style={{ fontSize: 11, color: "#9CA3AF", marginTop: 1 }}>{r.subcategory}</div>
                     </td>
                     <td style={{ padding: "13px 16px", fontSize: 13, color: "#374151" }}>{r.category}</td>
                     
                     {tab === "active" ? (
                       <>
-                        <td style={{ padding: "13px 16px", fontSize: 13, color: "#374151" }}>{r.responsible}</td>
-                        <td style={{ padding: "13px 16px" }}>
-                          <div style={{ fontSize: 13, color: "#374151" }}>{fmtDate(r.startDate)}</div>
-                          {!latestEventMap[r.id] && <DaysChip endDate={r.startDate} />}
-                        </td>
-                        <td style={{ padding: "13px 16px" }}><StatusBadge status={status} /></td>
-                        <td style={{ padding: "13px 16px" }}>
-                          <button
-                            onClick={e => { e.stopPropagation(); setEditMode(r); }}
-                            style={{ background: LIME_PALE, color: "#1d4ed8", border: `1px solid ${LIME}`, borderRadius: 7, padding: "5px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}
-                          >
-                            Edit
-                          </button>
-                        </td>
+                        <td style={{ padding: "13px 16px", fontSize: 13, color: "#374151" }}>
+                            {r.responsible}
+                          </td>
+
+                          {/* Service Start */}
+                          <td style={{ padding: "13px 16px" }}>
+                            <div style={{ fontSize: 13, color: "#374151" }}>
+                              {fmtDate(r.startDate)}
+                            </div>
+                          </td>
+
+                          {/* Next Renewal Date */}
+                          <td style={{ padding: "13px 16px" }}>
+                            <div
+                              style={{
+                                fontSize: 13,
+                                color: "#059669",
+                                fontWeight: 700
+                              }}
+                            >
+                              {fmtDate(r.endDate)}
+                            </div>
+                            <DaysChip endDate={r.endDate} />
+                          </td>
+
+                          <td style={{ padding: "13px 16px" }}>
+                            <div
+                              style={{
+                                display: "inline-flex",
+                                padding: "4px",
+                                borderRadius: "8px",
+                                background:
+                                  status === "done"
+                                    ? "#D1FAE5"
+                                    : status === "done_delayed"
+                                    ? "#FEF3C7"
+                                    : status === "due"
+                                    ? "#E0E7FF"
+                                    : status === "overdue"
+                                    ? "#FECACA"
+                                    : "#F3F4F6",
+                              }}
+                            >
+                              <StatusBadge status={status} />
+                            </div>
+                          </td>
+                        <td style={{ padding: "10px 12px" }}>
+                            <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setHistoryMode(r);
+                                }}
+                                style={{
+                                  ...actionBtn,
+                                  background: "#EFF6FF",
+                                  color: "#1D4ED8",
+                                }}
+                              >
+                                👁 View
+                              </button>
+
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setEditMode(r);
+                                }}
+                                style={{
+                                  ...actionBtn,
+                                  background: "#FEF3C7",
+                                  color: "#92400E",
+                                }}
+                              >
+                                ✏️ Edit
+                              </button>
+
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onNavigateUpdateForm?.(r);
+                                }}
+                                style={{
+                                  ...actionBtn,
+                                  background: "#DCFCE7",
+                                  color: "#166534",
+                                }}
+                              >
+                                🔄 Update
+                              </button>
+
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setDiscontinueItem(r);
+                                }}
+                                style={{
+                                  ...actionBtn,
+                                  background: "#FEE2E2",
+                                  color: "#991B1B",
+                                }}
+                              >
+                                ⛔ Discontinue
+                              </button>
+
+                            </div>
+                          </td>
                         <td style={{ padding: "13px 16px", fontSize: 12, color: "#374151" }}>
                         <div>{r.createdAt ? new Date(r.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "—"}</div>
                         <div style={{ fontSize: 11, color: "#9CA3AF", marginTop: 1 }}>
@@ -940,6 +1157,72 @@ export default function Dashboard({ categories = [], onNew, onEdit, onSelect, on
           </div>
         </div>
       )}
+
+      {discontinueItem && (
+  <div
+    style={{
+      position: "fixed",
+      inset: 0,
+      background: "rgba(0,0,0,0.45)",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      zIndex: 9999
+    }}
+  >
+    <div
+      style={{
+        background: "#fff",
+        borderRadius: 12,
+        width: 420,
+        padding: 24,
+        boxShadow: "0 20px 50px rgba(0,0,0,0.2)"
+      }}
+    >
+      <h3 style={{ margin: 0, marginBottom: 12 }}>
+        Discontinue Renewal
+      </h3>
+
+      <p style={{ color: "#4B5563", lineHeight: 1.6 }}>
+        Are you sure you want to discontinue
+        <strong> {discontinueItem.itemName}</strong>?
+      </p>
+
+      <p style={{ color: "#9CA3AF", fontSize: 13 }}>
+        This item will be moved to the Archive section.
+      </p>
+
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "flex-end",
+          gap: 10,
+          marginTop: 20
+        }}
+      >
+        <button
+          onClick={() => setDiscontinueItem(null)}
+          style={cancelStyle}
+        >
+          Cancel
+        </button>
+
+        <button
+          onClick={async () => {
+            await handleDiscontinue(discontinueItem);
+            setDiscontinueItem(null);
+          }}
+          style={{
+            ...saveStyle,
+            background: "#DC2626"
+          }}
+        >
+          Yes, Discontinue
+        </button>
+      </div>
+    </div>
+  </div>
+)}
     </div>
   );
 }
