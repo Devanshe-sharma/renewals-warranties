@@ -5,7 +5,7 @@ module.exports = {
   ],
 
   MANAGEMENT: [
-    "management@briskolive.com",
+    "da.automation@briskolive.com",
   ],
 
   AUTOMATION: [

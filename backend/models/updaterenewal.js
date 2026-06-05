@@ -63,6 +63,7 @@ const RenewalEventSchema = new mongoose.Schema(
     user_person:     { type: String, default: '' },  // Warranty only
     user_department: { type: String, default: '' },  // Warranty only
     remarks:         { type: String, default: '' },
+    discontinue_reason: { type: String, default: "" },
     email_sent: {
       type:    String,
       enum:    ['Yes', 'No'],

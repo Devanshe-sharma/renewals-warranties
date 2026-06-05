@@ -5,6 +5,64 @@ const Employee = require('../models/Employee');
 // const sendMail = require("../../sendMail");
 const sendRenewalCreatedMail = require("../utils/mailer/services/sendRenewalCreatedMail");
 
+
+
+
+// Add at top of file, after requires
+function mapBodyToDoc(b) {   // ← remove adminRenewer param
+  const endDate = b.frequency === "Other"
+    ? (b.customEndDate || b.endDate || null)
+    : (b.endDate || null);
+
+  const reminderDates = calcReminderDates(
+    endDate,
+    b.reminder1Days     ?? 30,
+    b.reminder2Days     ?? 10,
+    b.reminderFinalDays ?? 1,
+  );
+
+  return {
+    item_name:            b.itemName,
+    category:             b.category,
+    subcategory:          b.subcategory         || '',
+    description:          b.description         || '',
+    vendor:               b.vendor              || '',
+    service_link:         b.serviceLink         || '',
+    credential_username:  b.credentialUsername  || '',
+    credential_password:  b.credentialPassword  || '',
+    attachment1_link:     b.attachment1Link     || '',
+    attachment2_link:     b.attachment2Link     || '',
+
+    // Renewer — now always from frontend selection
+    renewer_name:         b.renewerName         || '',
+    renewer_department:   b.renewerDepartment   || '',
+    renewer_email:        b.renewerEmail        || '',
+    selected_renewer_id:  b.selectedRenewerId   || '',
+
+    selected_employee_id: b.selectedEmployeeId  || '',
+    emp_name:             b.empName             || '',
+    emp_id:               b.empId               || '',
+    department:           b.department          || '',
+    designation:          b.designation         || '',
+    email:                b.email               || '',
+    reporting_manager:    b.reportingManager    || '',
+    cc_recipients:        Array.isArray(b.ccRecipients) ? b.ccRecipients : [],
+
+    user_person:          b.userPerson          || '',
+    user_department:      b.userDepartment      || '',
+
+    start_date:           b.startDate,
+    end_date:             endDate,
+    custom_end_date:      b.customEndDate       || null,
+    frequency:            b.frequency,
+    frequency_count:      b.frequencyCount      || 1,
+    reminder1_days:       b.reminder1Days       ?? 30,
+    reminder2_days:       b.reminder2Days       ?? 10,
+    reminder_final_days:  b.reminderFinalDays   ?? 1,
+    ...reminderDates,
+  };
+}
+
 // ── Helper: calculate reminder dates ─────────────────────
 function calcReminderDates(endDate, r1, r2, rf) {
   if (!endDate) return {};
@@ -45,85 +103,20 @@ async function getAdminDeptHead() {
 // ────────────────────────────────────────────────────────
 router.post('/', async (req, res) => {
   try {
-    const b = req.body;
     const adminRenewer = await getAdminDeptHead();
-    const renewerName = b.renewerName || adminRenewer.name;
-    const renewerDepartment = b.renewerDepartment || adminRenewer.department;
-    const renewerEmail = b.renewerEmail || adminRenewer.email;
+    const fields = mapBodyToDoc(req.body);
 
-    const reminderDates = calcReminderDates(
-      b.endDate,
-      b.reminder1Days     ?? 30,
-      b.reminder2Days     ?? 10,
-      b.reminderFinalDays ?? 1,
-    );
-
-    const renewal = new Newrenewal({
-      // Renewal Details
-      item_name:   b.itemName,
-      category:    b.category,
-      subcategory: b.subcategory  || '',
-      description: b.description  || '',
-      vendor:      b.vendor       || '',
-      authority:   b.authority    || '',
-
-      // Renewer Details
-      renewer_name:         renewerName,
-      renewer_department:   renewerDepartment,
-      renewer_email:        renewerEmail,
-      selected_employee_id: b.selectedEmployeeId || '',
-      emp_name:             b.empName            || '',
-      emp_id:               b.empId              || '',
-      department:           b.department         || '',
-      designation:          b.designation        || '',
-      email:                b.email              || '',
-      reporting_manager:    b.reportingManager   || '',
-
-      // Reminders
-      start_date:           b.startDate,
-      end_date:             b.endDate || null,
-      frequency:            b.frequency,
-      reminder1_days:       b.reminder1Days     ?? 30,
-      reminder2_days:       b.reminder2Days     ?? 10,
-      reminder_final_days:  b.reminderFinalDays ?? 1,
-      ...reminderDates,
-
-      // Additional
-      remarks:         b.remarks        || '',
-      link:            b.link           || '',
-      user_person:     b.userPerson     || '',
-      user_department: b.userDepartment || '',
-
-      // Attachments
-      attachment1_link: b.attachment1Link || '',
-      attachment2_link: b.attachment2Link || '',
-
-      active:       true,
-      past_renewals: [],
-    });
-
+    const renewal = new Newrenewal({ ...fields, active: true, past_renewals: [] });
     const saved = await renewal.save();
+
     try {
-
-  const mailInfo = await sendRenewalCreatedMail(saved);
-
-  console.log("=================================");
-  console.log("✅ RENEWAL CREATED MAIL SENT");
-  console.log("ITEM:", saved.item_name);
-  console.log("ACCEPTED:", mailInfo.accepted);
-  console.log("REJECTED:", mailInfo.rejected);
-  console.log("MESSAGE ID:", mailInfo.messageId);
-  console.log("=================================");
-
-} catch (mailErr) {
-
-  console.error("❌ Renewal Created Mail Error:");
-  console.error(mailErr);
-
-}
+      const mailInfo = await sendRenewalCreatedMail(saved);
+      console.log("✅ Renewal mail sent:", mailInfo.accepted);
+    } catch (mailErr) {
+      console.error("❌ Renewal mail error:", mailErr);
+    }
 
     res.status(201).json({ success: true, data: saved });
-
   } catch (err) {
     console.error('Create renewal error:', err);
     res.status(400).json({ success: false, message: err.message });
@@ -188,62 +181,17 @@ router.get('/:id', async (req, res) => {
 // ────────────────────────────────────────────────────────
 router.put('/:id', async (req, res) => {
   try {
-    const b = req.body;
     const adminRenewer = await getAdminDeptHead();
-    const renewerName = b.renewerName || adminRenewer.name;
-    const renewerDepartment = b.renewerDepartment || adminRenewer.department;
-    const renewerEmail = b.renewerEmail || adminRenewer.email;
-
-    const reminderDates = calcReminderDates(
-      b.endDate,
-      b.reminder1Days     ?? 30,
-      b.reminder2Days     ?? 10,
-      b.reminderFinalDays ?? 1,
-    );
+    const fields = mapBodyToDoc(req.body);
 
     const updated = await Newrenewal.findOneAndUpdate(
       { item_id: req.params.id },
-      {
-        $set: {
-          item_name:            b.itemName,
-          category:             b.category,
-          subcategory:          b.subcategory        || '',
-          description:          b.description        || '',
-          vendor:               b.vendor             || '',
-          authority:            b.authority          || '',
-          renewer_name:         renewerName,
-          renewer_department:   renewerDepartment,
-          renewer_email:        renewerEmail,
-          selected_employee_id: b.selectedEmployeeId || '',
-          emp_name:             b.empName            || '',
-          emp_id:               b.empId              || '',
-          department:           b.department         || '',
-          designation:          b.designation        || '',
-          email:                b.email              || '',
-          reporting_manager:    b.reportingManager   || '',
-          start_date:           b.startDate,
-          end_date:             b.endDate            || null,
-          frequency:            b.frequency,
-          reminder1_days:       b.reminder1Days      ?? 30,
-          reminder2_days:       b.reminder2Days      ?? 10,
-          reminder_final_days:  b.reminderFinalDays  ?? 1,
-          ...reminderDates,
-          remarks:              b.remarks            || '',
-          link:                 b.link               || '',
-          user_person:          b.userPerson         || '',
-          user_department:      b.userDepartment     || '',
-          attachment1_link:     b.attachment1Link    || '',
-          attachment2_link:     b.attachment2Link    || '',
-        }
-      },
-      { new: true, runValidators: true }
+      { $set: fields },
+      { new: true, runValidators: false }
     );
 
-    if (!updated) {
-      return res.status(404).json({ success: false, message: 'Renewal not found' });
-    }
+    if (!updated) return res.status(404).json({ success: false, message: 'Renewal not found' });
     res.json({ success: true, data: updated });
-
   } catch (err) {
     res.status(400).json({ success: false, message: err.message });
   }
@@ -265,6 +213,25 @@ router.delete('/:id', async (req, res) => {
     }
     res.json({ success: true, message: `${req.params.id} deactivated` });
 
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+// POST /api/renewals/:id/archive
+router.post("/:id/archive", async (req, res) => {
+  try {
+    const { reason } = req.body;
+    const renewal = await Newrenewal.findOneAndUpdate(
+      { item_id: req.params.id },
+      {
+        is_closed: true,
+        closed_at: new Date(),
+        discontinue_reason: reason || "",
+      },
+      { new: true }
+    );
+    if (!renewal) return res.status(404).json({ success: false, message: "Not found" });
+    res.json({ success: true, data: renewal });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

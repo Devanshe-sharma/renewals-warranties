@@ -727,22 +727,13 @@ export default function Dashboard({ categories = [], onNew, onEdit, onSelect, on
   }, []);
 
   const handleDiscontinue = async (renewal) => {
-  const confirmed = window.confirm(
-    `Are you sure you want to discontinue "${renewal.itemName}"?\n\nThis action will move the renewal to Archive.`
-  );
-
-  if (!confirmed) return;
-
   try {
-    const res = await fetch(
-      `${API}/api/renewals/${renewal.id}/archive`,
-      {
-        method: "POST",
-      }
-    );
-
+    const res = await fetch(`${API}/api/renewals/${renewal.id}/archive`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ reason: renewal.reason }),
+    });
     const data = await res.json();
-
     if (data.success) {
       alert("✅ Renewal discontinued successfully");
       fetchRenewals();
@@ -813,6 +804,7 @@ export default function Dashboard({ categories = [], onNew, onEdit, onSelect, on
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "60vh", flexDirection: "column", gap: 16 }}>
         <div style={{ width: 36, height: 36, border: "3px solid #E5E7EB", borderTop: `3px solid ${LIME}`, borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
         <span style={{ color: "#9CA3AF", fontSize: 14 }}>Loading renewals...</span>
+       
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     );
@@ -1159,63 +1151,42 @@ export default function Dashboard({ categories = [], onNew, onEdit, onSelect, on
       )}
 
       {discontinueItem && (
-  <div
-    style={{
-      position: "fixed",
-      inset: 0,
-      background: "rgba(0,0,0,0.45)",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      zIndex: 9999
-    }}
-  >
-    <div
-      style={{
-        background: "#fff",
-        borderRadius: 12,
-        width: 420,
-        padding: 24,
-        boxShadow: "0 20px 50px rgba(0,0,0,0.2)"
-      }}
-    >
-      <h3 style={{ margin: 0, marginBottom: 12 }}>
-        Discontinue Renewal
-      </h3>
-
-      <p style={{ color: "#4B5563", lineHeight: 1.6 }}>
-        Are you sure you want to discontinue
-        <strong> {discontinueItem.itemName}</strong>?
+  <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999 }}>
+    <div style={{ background: "#fff", borderRadius: 12, width: 440, padding: 24, boxShadow: "0 20px 50px rgba(0,0,0,0.2)" }}>
+      <h3 style={{ margin: 0, marginBottom: 8, fontSize: 16, color: "#111" }}>⛔ Discontinue Renewal</h3>
+      <p style={{ color: "#4B5563", lineHeight: 1.6, marginBottom: 4, fontSize: 14 }}>
+        You are about to discontinue <strong>{discontinueItem.itemName}</strong>.
       </p>
+      <p style={{ color: "#9CA3AF", fontSize: 13, marginBottom: 16 }}>This item will be moved to the Archive section.</p>
 
-      <p style={{ color: "#9CA3AF", fontSize: 13 }}>
-        This item will be moved to the Archive section.
-      </p>
+      <div style={{ display: "flex", flexDirection: "column", gap: 4, marginBottom: 20 }}>
+        <label style={{ fontSize: 12, fontWeight: 600, color: "#374151" }}>
+          Reason for discontinuing <span style={{ color: "#EF4444" }}>*</span>
+        </label>
+        <textarea
+          value={discontinueItem.reason || ""}
+          onChange={e => setDiscontinueItem(d => ({ ...d, reason: e.target.value }))}
+          placeholder="e.g. Service no longer needed, replaced by another tool…"
+          rows={3}
+          style={{ border: "1.5px solid #E5E7EB", borderRadius: 8, padding: "9px 13px", fontSize: 14, color: "#111", outline: "none", width: "100%", boxSizing: "border-box", fontFamily: "inherit", resize: "vertical" }}
+        />
+        {discontinueItem.reasonError && (
+          <span style={{ fontSize: 11, color: "#EF4444" }}>{discontinueItem.reasonError}</span>
+        )}
+      </div>
 
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "flex-end",
-          gap: 10,
-          marginTop: 20
-        }}
-      >
-        <button
-          onClick={() => setDiscontinueItem(null)}
-          style={cancelStyle}
-        >
-          Cancel
-        </button>
-
+      <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
+        <button onClick={() => setDiscontinueItem(null)} style={cancelStyle}>Cancel</button>
         <button
           onClick={async () => {
+            if (!discontinueItem.reason?.trim()) {
+              setDiscontinueItem(d => ({ ...d, reasonError: "Please provide a reason" }));
+              return;
+            }
             await handleDiscontinue(discontinueItem);
             setDiscontinueItem(null);
           }}
-          style={{
-            ...saveStyle,
-            background: "#DC2626"
-          }}
+          style={{ ...saveStyle, background: "#DC2626" }}
         >
           Yes, Discontinue
         </button>

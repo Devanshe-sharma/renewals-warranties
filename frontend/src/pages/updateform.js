@@ -30,6 +30,7 @@ const BLANK = {
   selectedEmployeeId: "",
   empName: "", empId: "", department: "", designation: "",
   email: "", reportingManager: "",
+  close_reason: "",
 };
 
 // ────────────────────────────────────────────────────────
@@ -143,9 +144,9 @@ const handleItemSelect = (item_id) => {
     return;
   }
 
+  // ✅ Use actual end_date from renewal instead of calculating
   const prevStart  = item.start_date ? new Date(item.start_date) : null;
-  const months     = FREQ_MONTHS[item.frequency] || 12;
-  const prevExpiry = prevStart ? addMonths(prevStart, months) : null;
+  const prevExpiry = item.end_date   ? new Date(item.end_date)   : null;
 
   setForm((f) => ({
     ...f,
@@ -154,7 +155,7 @@ const handleItemSelect = (item_id) => {
     category:           item.category           || "",
     subcategory:        item.subcategory        || "",
     prev_start_date:    prevStart  ? fmtISO(prevStart)  : "",
-    prev_expiry_date:   prevExpiry ? fmtISO(prevExpiry) : "",
+    prev_expiry_date:   prevExpiry ? fmtISO(prevExpiry) : "", // ✅ actual end_date
     frequency:          item.frequency          || "",
     renewerName:        item.renewer_name       || f.renewerName       || "",
     renewerDepartment:  item.renewer_department || f.renewerDepartment || "Admin",
@@ -232,17 +233,20 @@ const handleEmployeeSelect = (id) => {
 
   // ── Validation ────────────────────────────────────────
   const validate = () => {
-    const e = {};
-    if (!form.item_id)          e.item_id          = "Required";
-    if (!form.renewal_required) e.renewal_required = "Required";
-    if (form.renewal_required === "Yes") {
-      if (!form.new_renewal_date) e.new_renewal_date = "Required";
-      if (!form.frequency)        e.frequency        = "Required";
-      if (!form.new_expiry_date)  e.new_expiry_date  = "Required";
-    }
-    setErrors(e);
-    return Object.keys(e).length === 0;
-  };
+  const e = {};
+  if (!form.item_id)          e.item_id          = "Required";
+  if (!form.renewal_required) e.renewal_required = "Required";
+  if (form.renewal_required === "Yes") {
+    if (!form.new_renewal_date) e.new_renewal_date = "Required";
+    if (!form.frequency)        e.frequency        = "Required";
+    if (!form.new_expiry_date)  e.new_expiry_date  = "Required";
+  }
+  if (form.renewal_required === "No" && !form.close_reason?.trim()) {
+    e.close_reason = "Please provide a reason for closing";
+  }
+  setErrors(e);
+  return Object.keys(e).length === 0;
+};
 
   // ── Submit ────────────────────────────────────────────
   const handleSave = async () => {
@@ -535,17 +539,37 @@ return (
           </Section>
         )}
 
-        {/* ── If Renewal Required = No, show a simple closed notice ── */}
+        
+        {/* ── If Renewal Required = No, ask for reason ── */}
         {form.renewal_required === "No" && (
-          <div style={{ background: "#1976d2", border: "1px solid #1565C0", borderRadius: 12, padding: "20px 24px", display: "flex", alignItems: "center", gap: 12 }}>
-            <span style={{ fontSize: 24, color: "#fff" }}>⚠️</span>
-            <div>
-              <div style={{ fontWeight: 700, color: "#fff", fontSize: 14 }}>Marked as Closed</div>
-              <div style={{ color: "rgba(255,255,255,0.9)", fontSize: 13, marginTop: 3 }}>
-                This renewal event will be recorded as <strong style={{ color: "#fff" }}>Closed</strong> with no new renewal details.
+          <Section title="Closure Details" emoji="⚠️">
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              <div style={{ background: "#FEE2E2", border: "1px solid #FECACA", borderRadius: 10, padding: "14px 16px", display: "flex", alignItems: "flex-start", gap: 10 }}>
+                <span style={{ fontSize: 20 }}>⚠️</span>
+                <div>
+                  <div style={{ fontWeight: 700, color: "#991B1B", fontSize: 14 }}>Marked as Closed</div>
+                  <div style={{ color: "#B91C1C", fontSize: 13, marginTop: 3 }}>
+                    This item will be recorded as <strong>Closed</strong> and moved to Archive.
+                  </div>
+                </div>
               </div>
+
+              <Field label="Reason for closing" error={errors.close_reason} required>
+                <textarea
+                  value={form.close_reason || ""}
+                  onChange={e => set("close_reason", e.target.value)}
+                  placeholder="e.g. Service discontinued, replaced by another tool, contract ended…"
+                  rows={3}
+                  style={{
+                    border: `1.5px solid ${errors.close_reason ? "#EF4444" : "#E5E7EB"}`,
+                    borderRadius: 8, padding: "9px 13px", fontSize: 14,
+                    color: "#111", outline: "none", width: "100%",
+                    boxSizing: "border-box", fontFamily: "inherit", resize: "vertical",
+                  }}
+                />
+              </Field>
             </div>
-          </div>
+          </Section>
         )}
 
         {/* ── Submit ── */}

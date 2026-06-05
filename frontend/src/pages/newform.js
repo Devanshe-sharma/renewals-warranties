@@ -10,13 +10,15 @@ const DEFAULT_REMIND = {
   Monthly:       { r1: 10, r2:  5, rf: 1 },
 };
 
+
 const BLANK = {
   itemName: "", category: "", subcategory: "", description: "",
   vendor: "", 
   serviceLink: "",
   credentialUsername: "", credentialPassword: "",
   attachment1Link: "", attachment2Link: "",
-  renewerName: "", renewerDepartment: "Admin", renewerEmail: "",
+  renewerName: "", renewerDepartment: "", renewerEmail: "",
+  selectedRenewerId: "",
   selectedEmployeeId: "",
   empName: "", empId: "", department: "", designation: "",
   email: "", reportingManager: "",
@@ -31,17 +33,6 @@ const addMonths = (d, n) => { const r = new Date(d); r.setMonth(r.getMonth() + n
 const fmtISO    = (d)    => d ? new Date(d).toISOString().split("T")[0] : "";
 const fmtDate   = (d)    => d ? new Date(d).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "";
 
-const getAdminUser = (employees) => {
-  const user = employees.find((emp) =>
-    (emp.Department || "").trim().toLowerCase().includes("admin") &&
-    ((emp["Department Head"] || "").trim() || (emp["Dept Head Email"] || "").trim())
-  );
-  return {
-    renewerName: user?.["Department Head"] || user?.Emp_name || "",
-    renewerDepartment: "Admin",
-    renewerEmail: user?.["Dept Head Email"] || user?.["desig Email Id"] || "",
-  };
-};
 
 // frequency count options
 const FREQ_COUNT_OPTIONS = {
@@ -61,6 +52,7 @@ export default function NewForm({ onSave, onCancel, embedded = false }) {
   const [showPassword, setShowPassword] = useState(false);
   const [ccSearch,     setCcSearch]     = useState("");
   const [ccOpen,       setCcOpen]       = useState(false);
+  const [saving,       setSaving]       = useState(false); 
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
@@ -97,7 +89,7 @@ export default function NewForm({ onSave, onCancel, embedded = false }) {
       .then(r => r.json())
       .then(data => {
         setEmployees(data);
-        setForm(f => ({ ...f, ...getAdminUser(data) }));
+      
       })
       .catch(err => console.error("Employee fetch error:", err));
   }, []);
@@ -133,6 +125,16 @@ export default function NewForm({ onSave, onCancel, embedded = false }) {
     }
   }, [form.frequency]);
 
+
+  useEffect(() => {
+  if (!ccOpen) return;
+  const handler = (e) => {
+    if (!e.target.closest("[data-cc-dropdown]")) setCcOpen(false);
+  };
+  document.addEventListener("mousedown", handler);
+  return () => document.removeEventListener("mousedown", handler);
+}, [ccOpen]);
+
   // ── Employee select ───────────────────────────────────
   const handleEmployeeSelect = (id) => {
     const emp = employees.find(e => e._id === id);
@@ -151,6 +153,21 @@ export default function NewForm({ onSave, onCancel, embedded = false }) {
       reportingManager: emp["Reporting Manager"] || "",
     }));
   };
+
+  const handleRenewerSelect = (id) => {
+  const emp = employees.find(e => e._id === id);
+  if (!emp) {
+    setForm(f => ({ ...f, selectedRenewerId: "", renewerName: "", renewerDepartment: "", renewerEmail: "" }));
+    return;
+  }
+  setForm(f => ({
+    ...f,
+    selectedRenewerId: id,
+    renewerName:       emp.Emp_name                                  || "",
+    renewerDepartment: emp.Department                                 || "",
+    renewerEmail:      emp["desig Email Id"] || emp["Dept Group Email"] || "",
+  }));
+};
 
   // ── CC multi-select helpers ───────────────────────────
   const toggleCC = (emp) => {
@@ -183,17 +200,28 @@ export default function NewForm({ onSave, onCancel, embedded = false }) {
   };
 
   const handleSave = async () => {
-    if (!validate()) return;
-    try {
-      const res = await fetch(`${process.env.REACT_APP_API_URL}/api/renewals`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, endDate }),
-      });
-      const data = await res.json();
-      if (data.success) { alert(`✅ Renewal created — ID: ${data.data.item_id}`); onSave(data.data); }
-      else alert(`❌ Error: ${data.message}`);
-    } catch (err) { alert("❌ Failed to save."); console.error(err); }
-  };
+  if (!validate()) return;
+  setSaving(true);
+  try {
+    const res = await fetch(`${process.env.REACT_APP_API_URL}/api/renewals`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...form, endDate }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      alert(`✅ Renewal created — ID: ${data.data.item_id}`);
+      onSave(data.data);
+    } else {
+      alert(`❌ Error: ${data.message}`);
+    }
+  } catch (err) {
+    alert("❌ Failed to save.");
+    console.error(err);
+  } finally {
+    setSaving(false);
+  }
+};
 
   // ── Styles ────────────────────────────────────────────
   const inp = (name, extra = {}) => ({
@@ -208,6 +236,9 @@ export default function NewForm({ onSave, onCancel, embedded = false }) {
     backgroundRepeat: "no-repeat", backgroundPosition: "right 10px center", paddingRight: 36,
   });
   const readOnly = (extra = {}) => inp("", { background: "#F9FAFB", color: "#6B7280", ...extra });
+
+
+
 
   return (
     <div style={{ paddingTop: embedded ? 0 : 56 }}>
@@ -316,19 +347,43 @@ export default function NewForm({ onSave, onCancel, embedded = false }) {
         </Section>
 
         {/* ── Renewer Details ── */}
-        <Section title="Renewer Details" emoji="👤">
-          <div style={grid3}>
-            <Field label="Renewer Name">
-              <input value={form.renewerName} readOnly style={readOnly()} />
-            </Field>
-            <Field label="Renewer Department">
-              <input value={form.renewerDepartment} readOnly style={readOnly()} />
-            </Field>
-            <Field label="Renewer Email">
-              <input value={form.renewerEmail} readOnly style={readOnly()} />
-            </Field>
-          </div>
-        </Section>
+        {/* ── Renewer Details ── */}
+      <Section title="Renewer Details" emoji="👤">
+        <div style={{ marginBottom: 16 }}>
+          <Field label="Select Renewer" required>
+            <select
+              value={form.selectedRenewerId || ""}
+              onChange={e => handleRenewerSelect(e.target.value)}
+              style={sel(form.selectedRenewerId ? "" : "renewerName")}
+            >
+              <option value="">Select renewer</option>
+              {employees
+                .slice()
+                .sort((a, b) =>
+                  (a.Designation || "").localeCompare(b.Designation || "") ||
+                  (a.Emp_name || "").localeCompare(b.Emp_name || "")
+                )
+                .map(em => (
+                  <option key={em._id} value={em._id}>
+                    {em.Designation ? `${em.Designation} — ` : ""}{em.Emp_name}
+                  </option>
+                ))}
+            </select>
+          </Field>
+        </div>
+
+        <div style={grid3}>
+          <Field label="Renewer Name">
+            <input value={form.renewerName} readOnly style={readOnly()} />
+          </Field>
+          <Field label="Renewer Department">
+            <input value={form.renewerDepartment} readOnly style={readOnly()} />
+          </Field>
+          <Field label="Renewer Email">
+            <input value={form.renewerEmail} readOnly style={readOnly()} />
+          </Field>
+        </div>
+      </Section>
 
         {/* ── User Details ── */}
         <Section title="User Details" emoji="👤">
@@ -358,7 +413,8 @@ export default function NewForm({ onSave, onCancel, embedded = false }) {
           {/* CC multi-select */}
           <div style={{ marginTop: 16 }}>
             <Field label="CC To (send mail)">
-              <div style={{ position: "relative" }}>
+             
+                <div style={{ position: "relative" }} data-cc-dropdown>
                 <div
                     onClick={() => setCcOpen(o => !o)}
                     style={{
@@ -540,7 +596,30 @@ export default function NewForm({ onSave, onCancel, embedded = false }) {
         {/* ── Submit ── */}
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 12, marginBottom: embedded ? 0 : 40 }}>
           <button onClick={onCancel} style={{ ...cancelBtnStyle, color: LIME }}>Cancel</button>
-          <button onClick={handleSave} style={{ ...saveBtnStyle, background: LIME, color: "#fff" }}>✅ Create Renewal</button>
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            style={{
+              ...saveBtnStyle,
+              background: saving ? "#90CAF9" : LIME,
+              color: "#fff",
+              cursor: saving ? "not-allowed" : "pointer",
+              display: "flex", alignItems: "center", gap: 8,
+              opacity: saving ? 0.85 : 1,
+            }}
+          >
+            {saving ? (
+              <>
+                <span style={{
+                  width: 14, height: 14, border: "2px solid #fff",
+                  borderTopColor: "transparent", borderRadius: "50%",
+                  display: "inline-block",
+                  animation: "spin 0.7s linear infinite",
+                }} />
+                Saving…
+              </>
+            ) : "✅ Create Renewal"}
+          </button>
         </div>
 
       </div>

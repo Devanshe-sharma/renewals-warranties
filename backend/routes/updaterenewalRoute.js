@@ -51,12 +51,12 @@ router.get('/items', async (req, res) => {
     const items = await Newrenewal
       .find({ active: true, is_closed: { $ne: true } })
       .select(`
-        item_id item_name category subcategory
-        start_date frequency
-        renewer_name renewer_department renewer_email
-        emp_name emp_id department designation email reporting_manager
-        selected_employee_id user_person user_department
-      `)
+          item_id item_name category subcategory
+          start_date end_date frequency          // ← add end_date
+          renewer_name renewer_department renewer_email
+          emp_name emp_id department designation email reporting_manager
+          selected_employee_id user_person user_department
+        `)
       .sort({ item_name: 1 })
       .lean();
 
