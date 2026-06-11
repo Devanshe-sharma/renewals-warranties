@@ -1,101 +1,173 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 
 const RenewalEventSchema = new mongoose.Schema(
   {
-    // ── Auto-generated Event ID ──────────────────────
+    // ─────────────────────────────────────────────
+    // Event Information
+    // ─────────────────────────────────────────────
     event_id: {
-      type:   String,
+      type: String,
       unique: true,
-      trim:   true,
+      trim: true,
     },
 
-    // ── Linked Renewal Item (from Newrenewal) ────────
-    item_id:     { type: String, required: true, trim: true },  // RW-0001
-    item_name:   { type: String, required: true, trim: true },
-    category:    { type: String, default: '' },
-    subcategory: { type: String, default: '' },
+    item_id: {
+      type: String,
+      required: true,
+      trim: true,
+    },
 
-    // Previous cycle dates (auto-filled from linked renewal)
-    prev_start_date:  { type: Date },
-    prev_expiry_date: { type: Date },  // calculated: prev_start + frequency
+    item_name: {
+      type: String,
+      required: true,
+      trim: true,
+    },
 
-    // ── Renewal Decision ─────────────────────────────
+    category: {
+      type: String,
+      default: "",
+    },
+
+    subcategory: {
+      type: String,
+      default: "",
+    },
+
+    prev_start_date: Date,
+    prev_expiry_date: Date,
+
+    // ─────────────────────────────────────────────
+    // Renewal Decision
+    // ─────────────────────────────────────────────
     renewal_required: {
-      type:     String,
-      enum:     ['Renew', 'Discontinue'],
+      type: String,
+      enum: ["Renew", "Discontinue"],
       required: true,
     },
 
-    // Status — Open if renewed, Closed if not
     status: {
-      type:    String,
-      enum:    ['Open', 'Closed'],
-      default: 'Open',
+      type: String,
+      enum: ["Open", "Closed"],
+      default: "Open",
     },
 
-    // ── New Renewal Details (filled when renewal_required = Yes) ──
-    new_renewal_date: { type: Date },
+    discontinue_reason: {
+      type: String,
+      required: function () {
+        return this.renewal_required === "Discontinue";
+      },
+      default: "",
+    },
+
+    // ─────────────────────────────────────────────
+    // Renewer Details
+    // ─────────────────────────────────────────────
+    selectedRenewerId: String,
+    renewerName: String,
+    renewerDepartment: String,
+    renewerEmail: String,
+
+    // ─────────────────────────────────────────────
+    // Employee Details
+    // ─────────────────────────────────────────────
+    selectedEmployeeId: String,
+
+    empName: String,
+    empId: String,
+
+    department: String,
+    designation: String,
+
+    email: String,
+    reportingManager: String,
+
+    // CC List
+    ccRecipients: [
+      {
+        id: String,
+        name: String,
+        email: String,
+      },
+    ],
+
+    // ─────────────────────────────────────────────
+    // Renewal Details
+    // ─────────────────────────────────────────────
+    new_renewal_date: Date,
+
     frequency: {
       type: String,
-      enum: ['Monthly', 'Quarterly', 'Half Yearly', 'Annually', ''],
-      default: '',
+      enum: [
+        "Monthly",
+        "Quarterly",
+        "Half Yearly",
+        "Annually",
+        "Other",
+        "",
+      ],
+      default: "",
     },
-    new_expiry_date: { type: Date },  // calculated: new_renewal_date + frequency
 
-    // ── Payment & Other Details ───────────────────────
-    vendor:         { type: String, default: '', trim: true },
-    authority:        { type: String, default: '', trim: true },
-    renewal_amount: { type: Number,  default: null },
+    frequencyCount: {
+      type: Number,
+      default: 1,
+    },
+
+    customEndDate: Date,
+
+    new_expiry_date: Date,
+
+
+    reminder1Days: {
+      type: Number,
+      default: null,
+    },
+
+    reminder2Days: {
+      type: Number,
+      default: null,
+    },
+
+    reminderFinalDays: {
+      type: Number,
+      default: null,
+    },
+
+    // ─────────────────────────────────────────────
+    // Payment Details
+    // ─────────────────────────────────────────────
+    
+
+   vendor: { type: String, default: "", trim: true },
+    authority: { type: String, default: "", trim: true },
+    renewal_amount: { type: Number, default: null },
     payment_mode: {
       type: String,
-      enum: ['Bank Transfer', 'Credit Card', 'Debit Card', 'UPI', 'Cheque', 'Cash', 'Other', ''],
-      default: '',
+      enum: ["Bank Transfer","Credit Card","Debit Card","UPI","Cheque","Cash","Other",""],
+      default: "",
     },
-    card_holder: {
-      type: String,
-      enum: ['admin', 'accounts', ''],
-      default: '',
-    },
-    invoice_ref:   { type: String, default: '' },
-    proof_link:    { type: String, default: '' },
+    card_holder: { type: String, enum: ["admin","accounts",""], default: "" },
+    invoice_ref:  { type: String, default: "" },
+    proof_link:   { type: String, default: "" },
 
-    // ── Additional Information ────────────────────────
-    user_person:     { type: String, default: '' },  // Warranty only
-    user_department: { type: String, default: '' },  // Warranty only
-    remarks:         { type: String, default: '' },
-    discontinue_reason: { type: String, default: "" },
-    email_sent: {
-      type:    String,
-      enum:    ['Yes', 'No'],
-      default: 'No',
+  service_link:  { type: String, default: "", trim: true },
+    username:      { type: String, default: "", trim: true },
+    password:      { type: String, default: "", trim: true },
+    description:   { type: String, default: "", trim: true },
+    attachment1_link: { type: String, default: "", trim: true },
+    attachment2_link: { type: String, default: "", trim: true },
+
+  close_reason:  {           
+      type: String,
+      required: function () { return this.renewal_required === "Discontinue"; },
+      default: "",
     },
   },
   {
-    collection: 'renewal_events',
+    collection: "renewal_events",
     timestamps: true,
   }
 );
-
-// ── Auto-generate event_id before save (RE-0001, RE-0002…) ──
-RenewalEventSchema.pre('save', async function (next) {
-  if (this.event_id) return next();
-  try {
-    const last = await this.constructor
-      .findOne({}, { event_id: 1 })
-      .sort({ createdAt: -1 })
-      .lean();
-
-    let nextNum = 1;
-    if (last?.event_id) {
-      const num = parseInt(last.event_id.replace('RE-', ''), 10);
-      if (!isNaN(num)) nextNum = num + 1;
-    }
-    this.event_id = `RE-${String(nextNum).padStart(4, '0')}`;
-    next();
-  } catch (err) {
-    next(err);
-  }
-});
 
 // ── Indexes ───────────────────────────────────────────────
 RenewalEventSchema.index({ event_id:  1 });
