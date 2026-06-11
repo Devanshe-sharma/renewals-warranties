@@ -4,6 +4,7 @@ const Newrenewal = require('../models/Newrenewal');
 const Employee = require('../models/Employee');
 // const sendMail = require("../../sendMail");
 const sendRenewalCreatedMail = require("../utils/mailer/services/sendRenewalCreatedMail");
+const sendRenewalDiscontinuedMail = require("../utils/mailer/services/sendRenewalDiscontinuedMail");
 
 
 
@@ -120,6 +121,38 @@ router.post('/', async (req, res) => {
   } catch (err) {
     console.error('Create renewal error:', err);
     res.status(400).json({ success: false, message: err.message });
+  }
+});
+
+
+router.post("/:id/archive", async (req, res) => {
+  try {
+    const { reason } = req.body;
+
+    const renewal = await Newrenewal.findOneAndUpdate(
+      { item_id: req.params.id },
+      {
+        is_closed:           true,
+        closed_at:           new Date(),
+        discontinue_reason:  reason || "",
+      },
+      { new: true }
+    );
+
+    if (!renewal) return res.status(404).json({ success: false, message: "Not found" });
+
+    // ── Fire discontinue email ──────────────────────────
+    try {
+      await sendRenewalDiscontinuedMail(renewal);
+      console.log(`📦 Discontinue mail sent for ${renewal.item_name}`);
+    } catch (mailErr) {
+      console.error("❌ Discontinue mail failed:", mailErr.message);
+      // Don't fail the request if mail fails
+    }
+
+    res.json({ success: true, data: renewal });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
   }
 });
     

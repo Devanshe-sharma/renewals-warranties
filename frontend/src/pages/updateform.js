@@ -36,7 +36,7 @@ const BLANK = {
 // ────────────────────────────────────────────────────────
 // UPDATE FORM  (Record Renewal Event)
 // ────────────────────────────────────────────────────────
-export default function UpdateForm({ onSave, onCancel }) {
+export default function UpdateForm({ onSave, onCancel, preSelectedItem = null }) {
   const [form,      setForm]      = useState(BLANK);
   const [errors,    setErrors]    = useState({});
   const [items,     setItems]     = useState([]);   // dropdown: all active renewals
@@ -219,7 +219,7 @@ const handleEmployeeSelect = (id) => {
 
   // ── Clear conditional fields when renewal_required = No ──
   useEffect(() => {
-    if (form.renewal_required === "No") {
+    if (form.renewal_required === "Discontinue") {
       setForm((f) => ({
         ...f,
         new_renewal_date: "", frequency: "", new_expiry_date: "",
@@ -231,17 +231,24 @@ const handleEmployeeSelect = (id) => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.renewal_required]);
 
+
+  useEffect(() => {
+  if (preSelectedItem && items.length > 0) {
+    handleItemSelect(preSelectedItem.id);
+  }
+}, [preSelectedItem, items]);
+
   // ── Validation ────────────────────────────────────────
   const validate = () => {
   const e = {};
   if (!form.item_id)          e.item_id          = "Required";
   if (!form.renewal_required) e.renewal_required = "Required";
-  if (form.renewal_required === "Yes") {
+  if (form.renewal_required === "Renew") {
     if (!form.new_renewal_date) e.new_renewal_date = "Required";
     if (!form.frequency)        e.frequency        = "Required";
     if (!form.new_expiry_date)  e.new_expiry_date  = "Required";
   }
-  if (form.renewal_required === "No" && !form.close_reason?.trim()) {
+  if (form.renewal_required === "Discontinue" && !form.close_reason?.trim()) {
     e.close_reason = "Please provide a reason for closing";
   }
   setErrors(e);
@@ -265,7 +272,7 @@ const handleEmployeeSelect = (id) => {
       return;
     }
 
-    const msg = form.renewal_required === "No"
+    const msg = form.renewal_required === "Discontinue"
       ? `✅ Event recorded — ID: ${data.data.event_id}\n📦 Item moved to archive.`
       : `✅ Event recorded — ID: ${data.data.event_id}`;
 
@@ -296,7 +303,7 @@ const handleEmployeeSelect = (id) => {
 
   const readOnly = (extra = {}) => inp("", { background: "#F9FAFB", color: "#6B7280", ...extra });
 
-  const showRenewalFields = form.renewal_required === "Yes";
+  const showRenewalFields = form.renewal_required === "Renew";
   const isWarranty        = form.category === "Warranty";
 
 return (
@@ -322,6 +329,25 @@ return (
       marginBottom: 24,
     }}
   >
+
+    {/* ← ADD HEADER HERE */}
+    <div style={{ background: LIME, borderRadius: "16px 16px 0 0", padding: "16px 24px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+      <div>
+        <div style={{ fontSize: 15, fontWeight: 700, color: "#fff" }}>
+          {preSelectedItem ? `Update — ${preSelectedItem.itemName}` : "Record Renewal Event"}
+        </div>
+        <div style={{ fontSize: 12, color: "rgba(255,255,255,0.7)", marginTop: 2 }}>
+          {preSelectedItem ? `${preSelectedItem.id} · ${preSelectedItem.category}` : "Log a renewal event against an existing item"}
+        </div>
+      </div>
+      <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+        <button onClick={handleSave} disabled={loading} style={{ background: "#fff", border: "none", borderRadius: 8, padding: "8px 18px", fontSize: 13, fontWeight: 700, color: LIME, cursor: "pointer", opacity: loading ? 0.7 : 1 }}>
+          {loading ? "Saving…" : "✅ Record Event"}
+        </button>
+        <button onClick={onCancel} style={{ background: "rgba(255,255,255,0.2)", border: "none", borderRadius: 8, width: 32, height: 32, cursor: "pointer", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff" }}>✕</button>
+      </div>
+    </div>
+
       {/* <Navbar
         title="Record Renewal Event"
         // subtitle="Log a renewal event against an existing renewal item"
@@ -377,8 +403,8 @@ return (
             <Field label="Renewal Required?" error={errors.renewal_required} required>
               <select value={form.renewal_required} onChange={(e) => set("renewal_required", e.target.value)} style={sel("renewal_required")}>
                 <option value="">Select</option>
-                <option value="Yes">Yes</option>
-                <option value="No">No</option>
+                <option value="Renew">Renew</option>
+                <option value="Discontinue">Discontinue</option>
               </select>
             </Field>
           </div>
@@ -541,7 +567,7 @@ return (
 
         
         {/* ── If Renewal Required = No, ask for reason ── */}
-        {form.renewal_required === "No" && (
+        {form.renewal_required === "Discontinue" && (
           <Section title="Closure Details" emoji="⚠️">
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
               <div style={{ background: "#FEE2E2", border: "1px solid #FECACA", borderRadius: 10, padding: "14px 16px", display: "flex", alignItems: "flex-start", gap: 10 }}>

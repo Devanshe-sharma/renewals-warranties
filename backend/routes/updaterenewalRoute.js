@@ -87,7 +87,7 @@ router.post('/', async (req, res) => {
 
     // Calculate new expiry from new_renewal_date + frequency
     const newFreqMonths = freqMonths[b.frequency] || 12;
-    const newExpiryDate = b.new_renewal_date && b.renewal_required === 'Yes'
+    const newExpiryDate = b.new_renewal_date && b.renewal_required === 'Renew'
       ? addMonths(new Date(b.new_renewal_date), newFreqMonths)
       : null;
 
@@ -101,12 +101,12 @@ router.post('/', async (req, res) => {
       prev_expiry_date: prevExpiryDate,
 
       renewal_required: b.renewal_required,
-      status: b.renewal_required === 'No' ? 'Closed' : 'Open',
+      status: b.renewal_required === 'Discontinue' ? 'Closed' : 'Open',
 
       // New renewal details
-      new_renewal_date: b.renewal_required === 'Yes' && b.new_renewal_date
+      new_renewal_date: b.renewal_required === 'Renew' && b.new_renewal_date
         ? new Date(b.new_renewal_date) : null,
-      frequency:        b.renewal_required === 'Yes' ? (b.frequency || '') : '',
+      frequency:        b.renewal_required === 'Renew' ? (b.frequency || '') : '',
       new_expiry_date:  newExpiryDate,
 
       // Payment
@@ -128,7 +128,7 @@ router.post('/', async (req, res) => {
 
     // If renewed, update the linked Newrenewal's start_date and end_date
     // so it reflects the new cycle
-    if (b.renewal_required === 'Yes' && b.new_renewal_date && newExpiryDate) {
+    if (b.renewal_required === 'Renew' && b.new_renewal_date && newExpiryDate) {
       await Newrenewal.findOneAndUpdate(
         { item_id: linkedItem.item_id },
         {
@@ -153,7 +153,7 @@ router.post('/', async (req, res) => {
     }
 
     // If not renewing, mark as closed
-    if (b.renewal_required === 'No') {
+    if (b.renewal_required === 'Discontinue') {
       await Newrenewal.findOneAndUpdate(
         { item_id: linkedItem.item_id },
         {

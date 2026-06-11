@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import Navbar, { NavbarButton } from "../components/navbar";
 import NewForm from "./newform";
+import UpdateForm from "./updateform";
 
 const API       = process.env.REACT_APP_API_URL;
 const LIME      = "#2563EB";
@@ -16,11 +17,9 @@ const DEFAULT_REMIND = {
 
 // ── 5 Status colours ──────────────────────────────────────
 const STATUS_COLOURS = {
-  done:         { bg: "#D1FAE5", text: "#065F46", label: "Done"         },
-  done_delayed: { bg: "#FEF9C3", text: "#854D0E", label: "Done Delayed" },
-  due:          { bg: "#E5E7EB", text: "#374151", label: "Due"          },
-  overdue:      { bg: "#FEE2E2", text: "#991B1B", label: "Overdue"      },
-  not_yet_due:  { bg: "#FFFFFF", text: "#6B7280", label: "Not Yet Due"  },
+  due:         { bg: "#fcf700", text: "#374151", label: "Due"        },
+  overdue:     { bg: "#ee0606", text: "#991B1B", label: "Overdue"    },
+  not_yet_due: { bg: "#FFFFFF", text: "#6B7280", label: "Not Yet Due" },
 };
 
 // ── Helpers ───────────────────────────────────────────────
@@ -31,6 +30,7 @@ const addMonths   = (d, n) => { const r = new Date(d); r.setMonth(r.getMonth() +
 const fmtCurr     = (n) => n != null && n !== "" ? `₹ ${Number(n).toLocaleString("en-IN")}` : "—";
 const daysBetween = (a, b) => Math.round((new Date(b) - new Date(a)) / 86400000);
 const toDay       = (d) => { const x = new Date(d); x.setHours(0,0,0,0); return x; };
+
 
 
 
@@ -54,22 +54,37 @@ const actionBtn = {
 export function computeStatus(renewal, latestEvent = null) {
   const today = toDay(new Date());
 
-  if (latestEvent) {
-    if (latestEvent.renewal_required === "No") return "overdue";
-    const renewedOn  = latestEvent.new_renewal_date  ? toDay(new Date(latestEvent.new_renewal_date))  : null;
-    const prevExpiry = latestEvent.prev_expiry_date  ? toDay(new Date(latestEvent.prev_expiry_date))  : null;
-    if (renewedOn && prevExpiry) {
-      return renewedOn <= prevExpiry ? "done" : "done_delayed";
-    }
-    return "done";
+  // ── If latest event exists and renewal_required = Yes ──
+  // The item was renewed — now check if the NEW expiry is approaching
+  if (latestEvent && latestEvent.renewal_required === "Yes") {
+    // Use new_expiry_date from the latest event as the new end date
+    const newExpiry = latestEvent.new_expiry_date
+      ? toDay(new Date(latestEvent.new_expiry_date))
+      : null;
+    const newR2 = latestEvent.new_expiry_date
+      ? toDay(new Date(new Date(latestEvent.new_expiry_date).setDate(
+          new Date(latestEvent.new_expiry_date).getDate() - (renewal.reminder2Days || 10)
+        )))
+      : null;
+
+    if (!newExpiry) return "not_yet_due";
+    if (today > newExpiry)              return "overdue";
+    if (newR2 && today >= newR2)        return "due";
+    return "not_yet_due";
   }
 
-  const endDate = renewal.endDate   ? toDay(new Date(renewal.endDate))   : null;
+  // ── If latest event is "No" (closed/discontinued) ──
+  if (latestEvent && latestEvent.renewal_required === "No") {
+    return "overdue";
+  }
+
+  // ── No event yet — use original renewal dates ──────────
+  const endDate = renewal.endDate   ? toDay(new Date(renewal.endDate))        : null;
   const r2Date  = renewal.reminder2Date ? toDay(new Date(renewal.reminder2Date)) : null;
 
-  if (!endDate) return "not_yet_due";
-  if (today > endDate) return "overdue";
-  if (r2Date && today >= r2Date) return "due";
+  if (!endDate)                        return "not_yet_due";
+  if (today > endDate)                 return "overdue";
+  if (r2Date && today >= r2Date)       return "due";
   return "not_yet_due";
 }
 
@@ -391,37 +406,22 @@ function HistoryModal({ renewal, onClose, onEdit }) {
 // ────────────────────────────────────────────────────────
 // EDIT MODAL
 // ────────────────────────────────────────────────────────
-const getAdminRenewer = (employees) => {
-  const admin = employees.find(emp =>
-    (emp.Department || "").trim().toLowerCase().includes("admin") &&
-    ((emp["Department Head"] || "").trim() || (emp["Dept Head Email"] || "").trim())
-  );
-  return {
-    renewerName:       admin?.["Department Head"] || admin?.Emp_name || "",
-    renewerDepartment: "Admin",
-    renewerEmail:      admin?.["Dept Head Email"] || admin?.["desig Email Id"] || "",
-  };
-};
+
 
 function EditModal({ renewal, categories, onClose, onSaved }) {
-  const [form,      setForm]      = useState({ ...renewal });
+
   const [employees, setEmployees] = useState([]);
   const [saving,    setSaving]    = useState(false);
   const [errors,    setErrors]    = useState({});
   const [words,     setWords]     = useState(0);
+  const [form, setForm] = useState({ ...renewal, selectedRenewerId: renewal.selectedRenewerId || "" });
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
   useEffect(() => {
     fetch(`${API}/api/employee`)
       .then(r => r.json())
-      .then(data => {
-        setEmployees(data);
-        setForm(f => {
-          if (f.renewerName && f.renewerEmail) return f;
-          return { ...f, ...getAdminRenewer(data) };
-        });
-      })
+      .then(data => setEmployees(data))
       .catch(console.error);
   }, []);
 
@@ -444,6 +444,22 @@ function EditModal({ renewal, categories, onClose, onSaved }) {
     : form.endDate || "";
 
   const rDate = (days) => endDate ? fmtISO(addDays(new Date(endDate), -days)) : "";
+
+
+  const handleRenewerSelect = (id) => {
+  const emp = employees.find(e => e._id === id);
+  if (!emp) {
+    setForm(f => ({ ...f, selectedRenewerId: "", renewerName: "", renewerDepartment: "", renewerEmail: "" }));
+    return;
+  }
+  setForm(f => ({
+    ...f,
+    selectedRenewerId:  id,
+    renewerName:        emp.Emp_name                                     || "",
+    renewerDepartment:  emp.Department                                    || "",
+    renewerEmail:       emp["desig Email Id"] || emp["Dept Group Email"]  || "",
+  }));
+};
 
   const handleEmployeeSelect = (id) => {
     const emp = employees.find(e => e._id === id);
@@ -562,12 +578,38 @@ function EditModal({ renewal, categories, onClose, onSaved }) {
           </MSection>
 
           <MSection title="Renewer Details">
-            <div style={g3}>
-              <MField label="Renewer Name"><input value={form.renewerName || ""} readOnly style={ro()} /></MField>
-              <MField label="Department"><input value={form.renewerDepartment || "Admin"} readOnly style={ro()} /></MField>
-              <MField label="Email"><input value={form.renewerEmail || ""} readOnly style={ro()} /></MField>
-            </div>
-          </MSection>
+              <MField label="Select Renewer">
+                <select
+                  value={form.selectedRenewerId || ""}
+                  onChange={e => handleRenewerSelect(e.target.value)}
+                  style={sel("")}
+                >
+                  <option value="">Select renewer</option>
+                  {employees
+                    .slice()
+                    .sort((a, b) =>
+                      (a.Designation || "").localeCompare(b.Designation || "") ||
+                      (a.Emp_name    || "").localeCompare(b.Emp_name    || "")
+                    )
+                    .map(em => (
+                      <option key={em._id} value={em._id}>
+                        {em.Designation ? `${em.Designation} — ` : ""}{em.Emp_name}
+                      </option>
+                    ))}
+                </select>
+              </MField>
+              <div style={{ ...g3, marginTop: 14 }}>
+                <MField label="Renewer Name">
+                  <input value={form.renewerName || ""} readOnly style={ro()} />
+                </MField>
+                <MField label="Department">
+                  <input value={form.renewerDepartment || ""} readOnly style={ro()} />
+                </MField>
+                <MField label="Email">
+                  <input value={form.renewerEmail || ""} readOnly style={ro()} />
+                </MField>
+              </div>
+            </MSection>
 
           <MSection title="User Details">
             <MField label="Employee">
@@ -702,7 +744,10 @@ export default function Dashboard({ categories = [], onNew, onEdit, onSelect, on
   const [editMode,        setEditMode]        = useState(null);
   const [createMode,      setCreateMode]      = useState(false);
   const [tab,             setTab]             = useState("active");
+  const [updateItem,      setUpdateItem]      = useState(null);
   const [discontinueItem, setDiscontinueItem] = useState(null);
+  
+  
 
   const fetchRenewals = useCallback(async () => {
     try {
@@ -828,12 +873,11 @@ export default function Dashboard({ categories = [], onNew, onEdit, onSelect, on
       />
 
       {/* ── Stats ── */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(5,1fr)", gap: 14, marginBottom: 0 }}>
-        <StatsCard label="Total"        value={renewals.length}               accent={LIME}     />
-        <StatsCard label="Not Yet Due"  value={statusCounts.not_yet_due || 0} accent="#E5E7EB"  />
-        <StatsCard label="Due"          value={statusCounts.due         || 0} accent="#9CA3AF"  />
-        <StatsCard label="Done"         value={(statusCounts.done || 0) + (statusCounts.done_delayed || 0)} accent="#22C55E" />
-        <StatsCard label="Overdue"      value={statusCounts.overdue     || 0} accent="#EF4444"  />
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 14, marginBottom: 0 }}>
+        <StatsCard label="Total"       value={renewals.length}               accent={LIME}    />
+        <StatsCard label="Not Yet Due" value={statusCounts.not_yet_due || 0} accent="#E5E7EB" />
+        <StatsCard label="Due"         value={statusCounts.due         || 0} accent="#9CA3AF" />
+        <StatsCard label="Overdue"     value={statusCounts.overdue     || 0} accent="#EF4444" />
       </div>
 
       {/* ── Tabs ── */}
@@ -859,8 +903,6 @@ export default function Dashboard({ categories = [], onNew, onEdit, onSelect, on
             <option value="all">All Status</option>
             <option value="not_yet_due">Not Yet Due</option>
             <option value="due">Due</option>
-            <option value="done">Done</option>
-            <option value="done_delayed">Done Delayed</option>
             <option value="overdue">Overdue</option>
           </select>
         )}
@@ -1050,10 +1092,7 @@ export default function Dashboard({ categories = [], onNew, onEdit, onSelect, on
                               </button>
 
                               <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  onNavigateUpdateForm?.(r);
-                                }}
+                                onClick={(e) => { e.stopPropagation(); setUpdateItem(r); }}
                                 style={{
                                   ...actionBtn,
                                   background: "#DCFCE7",
@@ -1091,6 +1130,7 @@ export default function Dashboard({ categories = [], onNew, onEdit, onSelect, on
                         <td style={{ padding: "13px 16px", fontSize: 13, color: "#374151" }}>{r.responsible}</td>
                         <td style={{ padding: "13px 16px" }}>
                           <span style={{ background: "#F3F4F6", color: "#6B7280", padding: "3px 10px", borderRadius: 20, fontSize: 12, fontWeight: 600 }}>
+                            
                             📦 {fmtDate(r.closedAt)}
                           </span>
                         </td>
@@ -1117,6 +1157,14 @@ export default function Dashboard({ categories = [], onNew, onEdit, onSelect, on
           renewal={historyMode}
           onClose={() => setHistoryMode(null)}
           onEdit={() => { setEditMode(historyMode); setHistoryMode(null); }}
+        />
+      )}
+
+      {updateItem && (
+        <UpdateForm
+          preSelectedItem={updateItem}
+          onSave={() => { setUpdateItem(null); fetchRenewals(); }}
+          onCancel={() => setUpdateItem(null)}
         />
       )}
 

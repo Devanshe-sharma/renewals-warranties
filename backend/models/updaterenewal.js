@@ -22,7 +22,7 @@ const RenewalEventSchema = new mongoose.Schema(
     // ── Renewal Decision ─────────────────────────────
     renewal_required: {
       type:     String,
-      enum:     ['Yes', 'No'],
+      enum:     ['Renew', 'Discontinue'],
       required: true,
     },
 
