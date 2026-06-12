@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import Navbar, { NavbarButton } from "../components/navbar";
 import NewForm from "./newform";
 import UpdateForm from "./updateform";
@@ -13,6 +13,13 @@ const DEFAULT_REMIND = {
   "Half Yearly": { r1: 30, r2: 10, rf: 1 },
   Quarterly:     { r1: 10, r2:  5, rf: 1 },
   Monthly:       { r1: 10, r2:  5, rf: 1 },
+};
+
+const FREQ_COUNT_OPTIONS = {
+  Monthly:       Array.from({ length: 12 }, (_, i) => ({ label: `${i + 1} Month${i > 0 ? "s" : ""}`,      value: i + 1 })),
+  Quarterly:     Array.from({ length: 4  }, (_, i) => ({ label: `${i + 1} Quarter${i > 0 ? "s" : ""}`,    value: (i + 1) * 3 })),
+  "Half Yearly": Array.from({ length: 4  }, (_, i) => ({ label: `${i + 1} Half Year${i > 0 ? "s" : ""}`,  value: (i + 1) * 6 })),
+  Annually:      Array.from({ length: 5  }, (_, i) => ({ label: `${i + 1} Year${i > 0 ? "s" : ""}`,       value: (i + 1) * 12 })),
 };
 
 // ── 5 Status colours ──────────────────────────────────────
@@ -129,45 +136,73 @@ function TH({ children }) {
 
 // ── Map DB renewal → frontend ─────────────────────────────
 const mapRenewal = (r) => ({
-  id:                 r.item_id,
-  itemName:           r.item_name            || "",
-  category:           r.category             || "",
-  subcategory:        r.subcategory          || "",
-  description:        r.description          || "",
-  vendor:             r.vendor               || "",
-  // authority:          r.authority            || "",
-  renewerName:        r.renewer_name         || r.emp_name || "",
-  renewerDepartment:  r.renewer_department   || r.department || "Admin",
-  renewerEmail:       r.renewer_email        || r.email || "",
-  responsible:        r.renewer_name         || r.emp_name || "",
-  empName:            r.emp_name             || "",
-  empId:              r.emp_id               || "",
-  department:         r.department           || "",
-  designation:        r.designation          || "",
-  email:              r.email                || "",
-  reportingManager:   r.reporting_manager    || "",
-  selectedEmployeeId: r.selected_employee_id || "",
-  startDate:          r.start_date    ? r.start_date.split("T")[0]    : "",
-  endDate:            r.end_date      ? r.end_date.split("T")[0]      : "",
+  id:                 r.item_id                                   || "",
+  itemName:           r.item_name                                 || "",
+  category:           r.category                                  || "",
+  subcategory:        r.subcategory                               || "",
+  description:        r.description                               || "",
+  vendor:             r.vendor                                    || "",
+  authority:          r.authority                                 || "",
+
+  // Renewer
+  renewerName:        r.renewer_name       || r.emp_name          || "",
+  renewerDepartment:  r.renewer_department || r.department        || "",
+  renewerEmail:       r.renewer_email      || r.email             || "",
+  responsible:        r.renewer_name       || r.emp_name          || "",
+  selectedRenewerId:  r.selected_renewer_id                       || "",
+
+  // Employee / User
+  empName:            r.emp_name                                  || "",
+  empId:              r.emp_id                                    || "",
+  department:         r.department                                || "",
+  designation:        r.designation                               || "",
+  email:              r.email                                     || "",
+  reportingManager:   r.reporting_manager                         || "",
+  selectedEmployeeId: r.selected_employee_id                      || "",
+
+  // Dates
+  startDate:          r.start_date     ? r.start_date.split("T")[0]     : "",
+  endDate:            r.end_date       ? r.end_date.split("T")[0]       : "",
   reminder2Date:      r.reminder2_date ? r.reminder2_date.split("T")[0] : "",
-  frequency:          r.frequency            || "",
-  reminder1Days:      r.reminder1_days       ?? 30,
-  reminder2Days:      r.reminder2_days       ?? 10,
-  reminderFinalDays:  r.reminder_final_days  ?? 1,
-  lastRenewedAt:      r.last_renewed_at      || null,
-  remarks:            r.remarks              || "",
-  link:               r.link                 || "",
-  userPerson:         r.user_person          || "",
-  userDepartment:     r.user_department      || "",
-  attachment1Link:    r.attachment1_link     || "",
-  attachment2Link:    r.attachment2_link     || "",
-  cost:               r.cost                 ?? 0,
-  currency:           r.currency             || "INR",
-  active:             r.active               ?? true,
-  isClosed:           r.is_closed            ?? false,
-  closedAt:           r.closed_at            || null,
-  pastRenewals:       r.past_renewals        || [],
-  createdAt:          r.createdAt            || null,
+
+  // Frequency & reminders
+  frequency:          r.frequency                                 || "",
+  frequencyCount:     r.frequency_count                           ?? 1,
+  reminder1Days:      r.reminder1_days                            ?? 30,
+  reminder2Days:      r.reminder2_days                            ?? 10,
+  reminderFinalDays:  r.reminder_final_days                       ?? 1,
+
+  // Misc
+  lastRenewedAt:      r.last_renewed_at                           || null,
+  remarks:            r.remarks                                   || "",
+  link:               r.link                                      || "",
+
+  // Warranty user
+  userPerson:         r.user_person                               || "",
+  userDepartment:     r.user_department                           || "",
+
+  // Attachments
+  attachment1Link:    r.attachment1_link                          || "",
+  attachment2Link:    r.attachment2_link                          || "",
+
+  // Financials
+  cost:               r.cost                                      ?? 0,
+  currency:           r.currency                                  || "INR",
+
+  // Status / archive
+  active:             r.active                                    ?? true,
+  isClosed:           r.is_closed                                 ?? false,
+  closedAt:           r.closed_at                                 || null,
+  pastRenewals:       r.past_renewals                             || [],
+  createdAt:          r.createdAt                                 || null,
+
+  // Credentials & service
+  serviceLink:        r.service_link                              || "",
+  credentialUsername: r.credential_username                       || "",
+  credentialPassword: r.credential_password                       || "",
+
+  // CC & recipients
+  ccRecipients:       Array.isArray(r.cc_recipients) ? r.cc_recipients : [],
 });
 
 function buildLatestEventMap(events) {
@@ -205,9 +240,32 @@ function DetailField({ label, value, mono, highlight }) {
   );
 }
 
+function PasswordField({ label, value }) {
+  const [show, setShow] = useState(false);
+  return (
+    <div>
+      <div style={{ fontSize: 11, color: "#9CA3AF", fontWeight: 600 }}>{label}</div>
+      <div style={{ fontSize: 13, color: "#111", fontWeight: 500, marginTop: 2, display: "flex", alignItems: "center", gap: 8 }}>
+        <span>{show ? (value || "—") : (value ? "••••••••" : "—")}</span>
+        {value && (
+          <button onClick={() => setShow(s => !s)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 12, color: "#6B7280", padding: 0 }}>
+            {show ? "🙈" : "👁️"}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ────────────────────────────────────────────────────────
 // HISTORY MODAL
 // ────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// COMPLETE HistoryModal — drop-in replacement for dashboard.jsx
+// Requires: computeStatus, StatusBadge, fmtDate, fmtCurr, toDay
+// (all already defined in your dashboard.jsx)
+// ─────────────────────────────────────────────────────────────────────────────
+
 function HistoryModal({ renewal, onClose, onEdit }) {
   const [events,  setEvents]  = useState([]);
   const [loading, setLoading] = useState(true);
@@ -224,40 +282,124 @@ function HistoryModal({ renewal, onClose, onEdit }) {
   const latestStatus = computeStatus(renewal, latestEvent);
 
   return (
-    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 2147483647, display: "flex", alignItems: "center", justifyContent: "center", padding: "24px 16px" }}>
-      <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 16, width: "100%", maxWidth: 860, maxHeight: "90vh", overflowY: "auto", boxShadow: "0 24px 64px rgba(0,0,0,0.25)" }}>
+    <div
+      onClick={onClose}
+      style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)",
+               backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)",
+               zIndex: 2147483647, display: "flex", alignItems: "center",
+               justifyContent: "center", padding: "24px 16px" }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{ background: "#fff", borderRadius: 16, width: "100%", maxWidth: 900,
+                 maxHeight: "90vh", overflowY: "auto",
+                 boxShadow: "0 24px 64px rgba(0,0,0,0.25)" }}
+      >
 
-        {/* Header */}
-        <div style={{ background: LIME, borderRadius: "16px 16px 0 0", padding: "16px 24px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        {/* ── Header ── */}
+        <div style={{ background: LIME, borderRadius: "16px 16px 0 0", padding: "16px 24px",
+                      display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div>
             <div style={{ fontSize: 15, fontWeight: 700, color: "#fff" }}>{renewal.itemName}</div>
-            <div style={{ fontSize: 12, color: "#bfdbfe", marginTop: 2 }}>{renewal.id} · {renewal.category}</div>
+            <div style={{ fontSize: 12, color: "#bfdbfe", marginTop: 2 }}>
+              {renewal.id} · {renewal.category}
+            </div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <StatusBadge status={latestStatus} />
-            <button onClick={onClose} style={{ background: "rgba(255,255,255,0.2)", border: "none", borderRadius: 8, width: 32, height: 32, cursor: "pointer", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff" }}>✕</button>
+            <button
+              onClick={onClose}
+              style={{ background: "rgba(255,255,255,0.2)", border: "none", borderRadius: 8,
+                       width: 32, height: 32, cursor: "pointer", fontSize: 16, display: "flex",
+                       alignItems: "center", justifyContent: "center", color: "#fff" }}
+            >✕</button>
           </div>
         </div>
 
         <div style={{ padding: 24, display: "flex", flexDirection: "column", gap: 20 }}>
 
-          <DetailSection title="📋 Renewal Details">
+          {/* ── Item Details ── */}
+          <DetailSection title="📋 Item Details">
             <DetailGrid cols={3}>
-              <DetailField label="Item ID"      value={renewal.id} mono />
-              <DetailField label="Category"     value={renewal.category} />
-              <DetailField label="Subcategory"  value={renewal.subcategory} />
-              <DetailField label="Item Name"    value={renewal.itemName} />
-              <DetailField label="Vendor"       value={renewal.vendor} />
-              <DetailField label="Authority"    value={renewal.authority} />
+              <DetailField label="Item ID"     value={renewal.id}          mono />
+              <DetailField label="Category"    value={renewal.category} />
+              <DetailField label="Subcategory" value={renewal.subcategory} />
+              <DetailField label="Item Name"   value={renewal.itemName} />
+              <DetailField label="Vendor"      value={renewal.vendor} />
+              <DetailField label="Authority"   value={renewal.authority} />
             </DetailGrid>
-            {renewal.description && (
+
+            {/* Cost */}
+            <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid #F3F4F6" }}>
+              <DetailGrid cols={3}>
+                <DetailField label="Cost"     value={fmtCurr(renewal.cost)} highlight />
+                <DetailField label="Currency" value={renewal.currency} />
+              </DetailGrid>
+            </div>
+
+            {/* Service Link */}
+         
               <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid #F3F4F6" }}>
-                <div style={{ fontSize: 11, color: "#9CA3AF", fontWeight: 600, marginBottom: 4 }}>Description</div>
-                <div style={{ fontSize: 13, color: "#374151", lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{renewal.description}</div>
+                <div style={{ fontSize: 11, color: "#9CA3AF", fontWeight: 600, marginBottom: 4 }}>Service Link</div>
+                <a href={renewal.serviceLink} target="_blank" rel="noopener noreferrer"
+                   style={{ fontSize: 13, color: "#1976d2", textDecoration: "none", wordBreak: "break-all" }}>
+                  {renewal.serviceLink}
+                </a>
+              </div>
+            
+
+            {/* Description */}
+           
+              <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid #F3F4F6" }}>
+                <div style={{ fontSize: 11, color: "#9CA3AF", fontWeight: 600, marginBottom: 4 }}>
+                  Description & Remarks
+                </div>
+                <div style={{ fontSize: 13, color: "#374151", lineHeight: 1.6, whiteSpace: "pre-wrap" }}>
+                  {renewal.description}
+                </div>
+              </div>
+            
+
+            {/* Attachments */}
+          
+              <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid #F3F4F6" }}>
+                <div style={{ fontSize: 11, color: "#9CA3AF", fontWeight: 600, marginBottom: 8 }}>
+                  📎 Attachments
+                </div>
+                <DetailGrid cols={2}>
+                  {[1, 2].map(n => {
+                    const link = renewal[`attachment${n}Link`];
+                    return link ? (
+                      <div key={n}>
+                        <div style={{ fontSize: 11, color: "#9CA3AF", fontWeight: 600 }}>Attachment {n}</div>
+                        <a href={link} target="_blank" rel="noopener noreferrer"
+                           style={{ fontSize: 13, color: "#1976d2", textDecoration: "none", wordBreak: "break-all" }}>
+                          {link}
+                        </a>
+                      </div>
+                    ) : null;
+                  })}
+                </DetailGrid>
+              </div>
+            
+
+            {/* Credentials */}
+            {(renewal.credentialUsername || renewal.credentialPassword) && (
+              <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid #F3F4F6",
+                            background: "#FFF7ED", border: "1px solid #FED7AA",
+                            borderRadius: 8, padding: 12 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: "#92400E", marginBottom: 10 }}>
+                  🔐 Credentials
+                </div>
+                <DetailGrid cols={2}>
+                  <DetailField label="Username" value={renewal.credentialUsername} />
+                  <PasswordField label="Password" value={renewal.credentialPassword} />
+                </DetailGrid>
               </div>
             )}
           </DetailSection>
 
+          {/* ── Renewer Details ── */}
           <DetailSection title="👤 Renewer Details">
             <DetailGrid cols={3}>
               <DetailField label="Renewer Name"       value={renewal.renewerName} />
@@ -266,6 +408,7 @@ function HistoryModal({ renewal, onClose, onEdit }) {
             </DetailGrid>
           </DetailSection>
 
+          {/* ── User Details ── */}
           <DetailSection title="👤 User Details">
             <DetailGrid cols={3}>
               <DetailField label="Employee Name"     value={renewal.empName} />
@@ -275,15 +418,45 @@ function HistoryModal({ renewal, onClose, onEdit }) {
               <DetailField label="Email"             value={renewal.email} />
               <DetailField label="Reporting Manager" value={renewal.reportingManager} />
             </DetailGrid>
+
+            {/* CC Recipients */}
+            {renewal.ccRecipients?.length > 0 && (
+              <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid #F3F4F6" }}>
+                <div style={{ fontSize: 11, color: "#9CA3AF", fontWeight: 600, marginBottom: 8 }}>
+                  CC Recipients
+                </div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                  {renewal.ccRecipients.map(c => (
+                    <span key={c.id}
+                      style={{ background: "#DBEAFE", color: "#1e40af", padding: "3px 10px",
+                               borderRadius: 12, fontSize: 12, fontWeight: 600 }}>
+                      {c.name}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Warranty user */}
+            {renewal.category === "Warranty" && (renewal.userPerson || renewal.userDepartment) && (
+              <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid #F3F4F6" }}>
+                <DetailGrid cols={2}>
+                  <DetailField label="Assigned User"   value={renewal.userPerson} />
+                  <DetailField label="User Department" value={renewal.userDepartment} />
+                </DetailGrid>
+              </div>
+            )}
           </DetailSection>
 
+          {/* ── Reminders ── */}
           <DetailSection title="🔔 Reminders">
             <DetailGrid cols={3}>
-              <DetailField label="Start Date"    value={fmtDate(renewal.startDate)} />
-              <DetailField label="End Date"      value={fmtDate(renewal.endDate)} highlight />
-              <DetailField label="Frequency"     value={renewal.frequency} />
-              <DetailField label="1st Reminder"  value={renewal.reminder1Days ? `${renewal.reminder1Days} days before` : "—"} />
-              <DetailField label="2nd Reminder"  value={renewal.reminder2Days ? `${renewal.reminder2Days} days before` : "—"} />
+              <DetailField label="Start Date"     value={fmtDate(renewal.startDate)} />
+              <DetailField label="End Date"       value={fmtDate(renewal.endDate)} highlight />
+              <DetailField label="Frequency"      value={renewal.frequency} />
+              <DetailField label="Frequency Count" value={renewal.frequencyCount ? String(renewal.frequencyCount) : "—"} />
+              <DetailField label="1st Reminder"   value={renewal.reminder1Days   ? `${renewal.reminder1Days} days before`  : "—"} />
+              <DetailField label="2nd Reminder"   value={renewal.reminder2Days   ? `${renewal.reminder2Days} days before`  : "—"} />
               <DetailField label="Final Reminder" value={renewal.reminderFinalDays ? `${renewal.reminderFinalDays} day before` : "—"} />
               {renewal.reminder2Date && (
                 <DetailField label="2nd Reminder Date" value={fmtDate(renewal.reminder2Date)} />
@@ -291,98 +464,105 @@ function HistoryModal({ renewal, onClose, onEdit }) {
             </DetailGrid>
           </DetailSection>
 
-          <DetailSection title="ℹ️ Additional Details">
-            <DetailGrid cols={3}>
-              <DetailField label="Remarks" value={renewal.remarks} />
-              {renewal.link
-                ? <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                    <div style={{ fontSize: 11, color: "#9CA3AF", fontWeight: 600 }}>Website Link</div>
-                    <a href={renewal.link} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, color: "#1976d2", textDecoration: "none", wordBreak: "break-all" }}>{renewal.link}</a>
-                  </div>
-                : <DetailField label="Website Link" value="—" />
-              }
-              {renewal.category === "Warranty" && <>
-                <DetailField label="Assigned User"    value={renewal.userPerson} />
-                <DetailField label="User Department"  value={renewal.userDepartment} />
-              </>}
-            </DetailGrid>
-          </DetailSection>
-
-          {(renewal.attachment1Link || renewal.attachment2Link) && (
-            <DetailSection title="📎 Attachments">
-              <DetailGrid cols={2}>
-                {[1, 2].map(n => {
-                  const link = renewal[`attachment${n}Link`];
-                  return link ? (
-                    <div key={n} style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                      <div style={{ fontSize: 11, color: "#9CA3AF", fontWeight: 600 }}>Attachment {n}</div>
-                      <a href={link} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, color: "#1976d2", textDecoration: "none", wordBreak: "break-all" }}>{link}</a>
-                    </div>
-                  ) : null;
-                })}
-              </DetailGrid>
-            </DetailSection>
-          )}
-
-          {/* Renewal history */}
+          {/* ── Renewal History table ── */}
           <div style={{ border: "1px solid #F3F4F6", borderRadius: 10, overflow: "hidden" }}>
-            <div style={{ background: "#F9FAFB", padding: "8px 16px", fontSize: 12, fontWeight: 700, color: "#374151", borderBottom: "1px solid #F3F4F6", display: "flex", justifyContent: "space-between" }}>
+            <div style={{ background: "#F9FAFB", padding: "8px 16px", fontSize: 12, fontWeight: 700,
+                          color: "#374151", borderBottom: "1px solid #F3F4F6",
+                          display: "flex", justifyContent: "space-between" }}>
               <span>Renewal History</span>
-              <span style={{ color: "#9CA3AF", fontWeight: 400 }}>{events.length} event{events.length !== 1 ? "s" : ""}</span>
+              <span style={{ color: "#9CA3AF", fontWeight: 400 }}>
+                {events.length} event{events.length !== 1 ? "s" : ""}
+              </span>
             </div>
 
             {loading ? (
-              <div style={{ padding: "30px 0", textAlign: "center", color: "#9CA3AF" }}>Loading...</div>
+              <div style={{ padding: "30px 0", textAlign: "center", color: "#9CA3AF" }}>
+                Loading...
+              </div>
             ) : events.length === 0 ? (
-              <div style={{ padding: "30px 0", textAlign: "center", color: "#9CA3AF", fontSize: 13 }}>No renewal events recorded yet</div>
+              <div style={{ padding: "30px 0", textAlign: "center", color: "#9CA3AF", fontSize: 13 }}>
+                No renewal events recorded yet
+              </div>
             ) : (
               <div style={{ overflowX: "auto" }}>
                 <table style={{ width: "100%", borderCollapse: "collapse" }}>
                   <thead>
                     <tr style={{ background: "#F9FAFB" }}>
-                      {["Event", "Status", "Prev Expiry", "New Date", "New Expiry", "Amount", "Mode", "By", "On"].map(h => (
-                        <th key={h} style={{ padding: "9px 14px", fontSize: 10, fontWeight: 700, color: "#9CA3AF", textAlign: "left", letterSpacing: 0.5, textTransform: "uppercase", borderBottom: "1px solid #F3F4F6", whiteSpace: "nowrap" }}>{h}</th>
+                      {["Event", "Renewal Req.", "Prev Expiry", "New Date", "New Expiry",
+                        "Amount", "Mode", "By", "On"].map(h => (
+                        <th key={h}
+                          style={{ padding: "9px 14px", fontSize: 10, fontWeight: 700,
+                                   color: "#9CA3AF", textAlign: "left", letterSpacing: 0.5,
+                                   textTransform: "uppercase", borderBottom: "1px solid #F3F4F6",
+                                   whiteSpace: "nowrap" }}>
+                          {h}
+                        </th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
                     {events.map((ev, idx) => {
+                      const isLatest = idx === 0;
+
+                      // derive row status exactly as original code did
                       let evStatus;
                       if (ev.renewal_required === "No") {
                         evStatus = "overdue";
                       } else {
-                        const renewedOn  = ev.new_renewal_date  ? toDay(new Date(ev.new_renewal_date))  : null;
-                        const prevExpiry = ev.prev_expiry_date  ? toDay(new Date(ev.prev_expiry_date))  : null;
-                        if (renewedOn && prevExpiry) {
-                          evStatus = renewedOn <= prevExpiry ? "done" : "done_delayed";
-                        } else {
-                          evStatus = "done";
-                        }
+                        const renewedOn  = ev.new_renewal_date ? toDay(new Date(ev.new_renewal_date)) : null;
+                        const prevExpiry = ev.prev_expiry_date ? toDay(new Date(ev.prev_expiry_date)) : null;
+                        evStatus = (renewedOn && prevExpiry && renewedOn <= prevExpiry)
+                          ? "done" : "done_delayed";
                       }
 
-                      const isLatest = idx === 0;
                       return (
-                        <tr key={ev._id}
-                          style={{ borderBottom: "1px solid #F9FAFB", background: isLatest ? "#EFF6FF" : "transparent" }}
-                          onMouseEnter={(e) => {
-                              e.currentTarget.style.filter = "brightness(0.97)";
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.filter = "none";
-                            }}
+                        <tr
+                          key={ev._id}
+                          style={{ borderBottom: "1px solid #F9FAFB",
+                                   background: isLatest ? "#EFF6FF" : "transparent" }}
+                          onMouseEnter={e => e.currentTarget.style.filter = "brightness(0.97)"}
+                          onMouseLeave={e => e.currentTarget.style.filter = "none"}
                         >
                           <td style={{ padding: "11px 14px" }}>
-                            <div style={{ fontSize: 11, color: "#9CA3AF", fontFamily: "monospace" }}>{ev.event_id}</div>
-                            {isLatest && <div style={{ fontSize: 9, color: "#059669", fontWeight: 700, marginTop: 1 }}>LATEST</div>}
+                            <div style={{ fontSize: 11, color: "#9CA3AF", fontFamily: "monospace" }}>
+                              {ev.event_id}
+                            </div>
+                            {isLatest && (
+                              <div style={{ fontSize: 9, color: "#059669", fontWeight: 700, marginTop: 1 }}>
+                                LATEST
+                              </div>
+                            )}
                           </td>
-                          <td style={{ padding: "11px 14px" }}><StatusBadge status={evStatus} /></td>
-                          <td style={{ padding: "11px 14px", fontSize: 12, color: "#374151" }}>{fmtDate(ev.prev_expiry_date)}</td>
-                          <td style={{ padding: "11px 14px", fontSize: 12, color: "#374151" }}>{fmtDate(ev.new_renewal_date)}</td>
-                          <td style={{ padding: "11px 14px", fontSize: 12, color: "#059669", fontWeight: 600 }}>{fmtDate(ev.new_expiry_date)}</td>
-                          <td style={{ padding: "11px 14px", fontSize: 12, color: "#374151", whiteSpace: "nowrap" }}>{fmtCurr(ev.renewal_amount)}</td>
-                          <td style={{ padding: "11px 14px", fontSize: 12, color: "#374151" }}>{ev.payment_mode || "—"}</td>
-                          <td style={{ padding: "11px 14px", fontSize: 12, color: "#374151" }}>{ev.renewed_by || "—"}</td>
-                          <td style={{ padding: "11px 14px", fontSize: 11, color: "#9CA3AF" }}>{fmtDate(ev.createdAt)}</td>
+                          <td style={{ padding: "11px 14px" }}>
+                            <span style={{
+                              background: ev.renewal_required === "Yes" ? "#DCFCE7" : "#FEE2E2",
+                              color:      ev.renewal_required === "Yes" ? "#166534" : "#991B1B",
+                              padding: "2px 8px", borderRadius: 10, fontSize: 11, fontWeight: 700
+                            }}>
+                              {ev.renewal_required || "—"}
+                            </span>
+                          </td>
+                          <td style={{ padding: "11px 14px", fontSize: 12, color: "#374151" }}>
+                            {fmtDate(ev.prev_expiry_date)}
+                          </td>
+                          <td style={{ padding: "11px 14px", fontSize: 12, color: "#374151" }}>
+                            {fmtDate(ev.new_renewal_date)}
+                          </td>
+                          <td style={{ padding: "11px 14px", fontSize: 12, color: "#059669", fontWeight: 600 }}>
+                            {fmtDate(ev.new_expiry_date)}
+                          </td>
+                          <td style={{ padding: "11px 14px", fontSize: 12, color: "#374151", whiteSpace: "nowrap" }}>
+                            {fmtCurr(ev.renewal_amount)}
+                          </td>
+                          <td style={{ padding: "11px 14px", fontSize: 12, color: "#374151" }}>
+                            {ev.payment_mode || "—"}
+                          </td>
+                          <td style={{ padding: "11px 14px", fontSize: 12, color: "#374151" }}>
+                            {ev.renewed_by || "—"}
+                          </td>
+                          <td style={{ padding: "11px 14px", fontSize: 11, color: "#9CA3AF" }}>
+                            {fmtDate(ev.createdAt)}
+                          </td>
                         </tr>
                       );
                     })}
@@ -392,11 +572,12 @@ function HistoryModal({ renewal, onClose, onEdit }) {
             )}
           </div>
 
-          {/* Footer */}
+          {/* ── Footer ── */}
           <div style={{ display: "flex", justifyContent: "flex-end", gap: 12 }}>
             <button onClick={onClose} style={cancelStyle}>Close</button>
-            <button onClick={onEdit} style={saveStyle}>✏️ Edit Item</button>
+            <button onClick={onEdit}  style={saveStyle}>✏️ Edit Item</button>
           </div>
+
         </div>
       </div>
     </div>
@@ -408,59 +589,133 @@ function HistoryModal({ renewal, onClose, onEdit }) {
 // ────────────────────────────────────────────────────────
 
 
-function EditModal({ renewal, categories, onClose, onSaved }) {
-
-  const [employees, setEmployees] = useState([]);
-  const [saving,    setSaving]    = useState(false);
-  const [errors,    setErrors]    = useState({});
-  const [words,     setWords]     = useState(0);
-  const [form, setForm] = useState({ ...renewal, selectedRenewerId: renewal.selectedRenewerId || "" });
-
+function EditModal({ renewal, categories: categoriesProp, onClose, onSaved }) {
+  const [employees,    setEmployees]    = useState([]);
+  const [categories,  setCategories]  = useState(categoriesProp || []);
+  const [saving,       setSaving]       = useState(false);
+  const [errors,       setErrors]       = useState({});
+  const [words,        setWords]        = useState(0);
+  const [showPassword, setShowPassword] = useState(false);
+  const [ccSearch,     setCcSearch]     = useState("");
+  const [ccOpen,       setCcOpen]       = useState(false);
+ 
+  const [form, setForm] = useState({
+    // Item
+    itemName:           renewal.itemName           || "",
+    category:           renewal.category           || "",
+    subcategory:        renewal.subcategory        || "",
+    description:        renewal.description        || "",
+    vendor:             renewal.vendor             || "",
+    authority:          renewal.authority          || "",
+    serviceLink:        renewal.serviceLink        || "",
+    credentialUsername: renewal.credentialUsername || "",
+    credentialPassword: renewal.credentialPassword || "",
+    attachment1Link:    renewal.attachment1Link    || "",
+    attachment2Link:    renewal.attachment2Link    || "",
+    // Renewer
+    selectedRenewerId:  renewal.selectedRenewerId  || "",
+    renewerName:        renewal.renewerName        || "",
+    renewerDepartment:  renewal.renewerDepartment  || "",
+    renewerEmail:       renewal.renewerEmail       || "",
+    // User
+    selectedEmployeeId: renewal.selectedEmployeeId || "",
+    empName:            renewal.empName            || "",
+    empId:              renewal.empId              || "",
+    department:         renewal.department         || "",
+    designation:        renewal.designation        || "",
+    email:              renewal.email              || "",
+    reportingManager:   renewal.reportingManager   || "",
+    ccRecipients:       renewal.ccRecipients       || [],
+    userPerson:         renewal.userPerson         || "",
+    userDepartment:     renewal.userDepartment     || "",
+    // Reminders
+    startDate:          renewal.startDate          || "",
+    frequency:          renewal.frequency          || "",
+    frequencyCount:     renewal.frequencyCount     || 1,
+    customEndDate:      renewal.endDate            || "",
+    reminder1Days:      renewal.reminder1Days      ?? 30,
+    reminder2Days:      renewal.reminder2Days      ?? 10,
+    reminderFinalDays:  renewal.reminderFinalDays  ?? 1,
+    // Misc
+    remarks:            renewal.remarks            || "",
+    link:               renewal.link               || "",
+  });
+ 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
-
+ 
+  // ── fetch employees ──────────────────────────────────────────────────────
   useEffect(() => {
-    fetch(`${API}/api/employee`)
-      .then(r => r.json())
-      .then(data => setEmployees(data))
-      .catch(console.error);
-  }, []);
+  fetch(`${API}/api/employee`)
+    .then(r => r.json())
+    .then(setEmployees)
+    .catch(console.error);
 
+  // fetch categories independently
+  fetch(`${API}/api/categories`)        // ← your actual endpoint
+    .then(r => r.json())
+    .then(data => {
+      if (Array.isArray(data)) setCategories(data);
+      else if (data.success && Array.isArray(data.data)) setCategories(data.data);
+    })
+    .catch(console.error);
+}, []);
+ 
+  // ── word count ───────────────────────────────────────────────────────────
   useEffect(() => {
     setWords((form.description || "").trim().split(/\s+/).filter(Boolean).length);
   }, [form.description]);
-
+ 
+  // ── default reminder days on frequency change ────────────────────────────
+  // AFTER — use a ref to skip the first run
+const isFirstRender = useRef(true);
+useEffect(() => {
+  if (isFirstRender.current) { isFirstRender.current = false; return; }
+  if (form.frequency && DEFAULT_REMIND[form.frequency]) {
+    const d = DEFAULT_REMIND[form.frequency];
+    setForm(f => ({ ...f, reminder1Days: d.r1, reminder2Days: d.r2, reminderFinalDays: d.rf, frequencyCount: 1 }));
+  }
+}, [form.frequency]); // eslint-disable-line
+ 
+  // ── close CC dropdown on outside click ──────────────────────────────────
   useEffect(() => {
-    if (form.frequency && DEFAULT_REMIND[form.frequency]) {
-      const d = DEFAULT_REMIND[form.frequency];
-      setForm(f => ({ ...f, reminder1Days: d.r1, reminder2Days: d.r2, reminderFinalDays: d.rf }));
-    }
-  }, [form.frequency]);
-
+    if (!ccOpen) return;
+    const handler = (e) => { if (!e.target.closest("[data-cc-dropdown]")) setCcOpen(false); };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [ccOpen]);
+ 
+  // ── derived: category → subcategories ───────────────────────────────────
   const selectedCategory = categories.find(c => c.name === form.category);
   const subcats = selectedCategory?.subcategories || [];
-
-  const endDate = form.startDate && form.frequency
-    ? fmtISO(addMonths(new Date(form.startDate), FREQ_MONTHS[form.frequency] || 12))
-    : form.endDate || "";
-
+ 
+  // ── derived: end date ────────────────────────────────────────────────────
+  const endDate = (() => {
+    if (form.frequency === "Other") return form.customEndDate || "";
+    if (!form.startDate || !form.frequency) return "";
+    const months = ["Monthly", "Annually"].includes(form.frequency)
+      ? (form.frequencyCount || 1)
+      : (FREQ_MONTHS[form.frequency] || 12);
+    return fmtISO(addMonths(new Date(form.startDate), months));
+  })();
+ 
   const rDate = (days) => endDate ? fmtISO(addDays(new Date(endDate), -days)) : "";
-
-
+ 
+  // ── employee select handlers ─────────────────────────────────────────────
   const handleRenewerSelect = (id) => {
-  const emp = employees.find(e => e._id === id);
-  if (!emp) {
-    setForm(f => ({ ...f, selectedRenewerId: "", renewerName: "", renewerDepartment: "", renewerEmail: "" }));
-    return;
-  }
-  setForm(f => ({
-    ...f,
-    selectedRenewerId:  id,
-    renewerName:        emp.Emp_name                                     || "",
-    renewerDepartment:  emp.Department                                    || "",
-    renewerEmail:       emp["desig Email Id"] || emp["Dept Group Email"]  || "",
-  }));
-};
-
+    const emp = employees.find(e => e._id === id);
+    if (!emp) {
+      setForm(f => ({ ...f, selectedRenewerId: "", renewerName: "", renewerDepartment: "", renewerEmail: "" }));
+      return;
+    }
+    setForm(f => ({
+      ...f,
+      selectedRenewerId:  id,
+      renewerName:        emp.Emp_name                                     || "",
+      renewerDepartment:  emp.Department                                    || "",
+      renewerEmail:       emp["desig Email Id"] || emp["Dept Group Email"]  || "",
+    }));
+  };
+ 
   const handleEmployeeSelect = (id) => {
     const emp = employees.find(e => e._id === id);
     if (!emp) {
@@ -470,236 +725,653 @@ function EditModal({ renewal, categories, onClose, onSaved }) {
     setForm(f => ({
       ...f,
       selectedEmployeeId: id,
-      empName:          emp.Emp_name            || "",
-      empId:            String(emp.Emp_id)       || "",
-      department:       emp.Department           || "",
-      designation:      emp.Designation          || "",
-      email:            emp["desig Email Id"]    || "",
-      reportingManager: emp["Reporting Manager"] || "",
+      empName:            emp.Emp_name            || "",
+      empId:              String(emp.Emp_id)       || "",
+      department:         emp.Department           || "",
+      designation:        emp.Designation          || "",
+      email:              emp["desig Email Id"]    || "",
+      reportingManager:   emp["Reporting Manager"] || "",
     }));
   };
-
+ 
+  // ── CC helpers ───────────────────────────────────────────────────────────
+  const toggleCC = (emp) => {
+    setForm(f => {
+      const exists = f.ccRecipients.find(c => c.id === emp._id);
+      return {
+        ...f,
+        ccRecipients: exists
+          ? f.ccRecipients.filter(c => c.id !== emp._id)
+          : [...f.ccRecipients, { id: emp._id, name: emp.Emp_name, email: emp["desig Email Id"] || "" }],
+      };
+    });
+  };
+ 
+  const ccFiltered = employees
+    .filter(em =>
+      (em.Emp_name    || "").toLowerCase().includes(ccSearch.toLowerCase()) ||
+      (em.Designation || "").toLowerCase().includes(ccSearch.toLowerCase())
+    )
+    .slice()
+    .sort((a, b) => (a.Emp_name || "").localeCompare(b.Emp_name || ""));
+ 
+  // ── validation ───────────────────────────────────────────────────────────
   const validate = () => {
     const e = {};
-    if (!form.itemName?.trim()) e.itemName  = "Required";
-    if (!form.category)         e.category  = "Required";
-    if (!form.startDate)        e.startDate = "Required";
-    if (!form.frequency)        e.frequency = "Required";
-    if (words > 150)            e.description = "Max 150 words";
+    if (!form.itemName?.trim()) e.itemName     = "Required";
+    if (!form.category)         e.category     = "Required";
+    if (!form.startDate)        e.startDate    = "Required";
+    if (!form.frequency)        e.frequency    = "Required";
+    if (form.frequency === "Other" && !form.customEndDate) e.customEndDate = "Required";
+    if (words > 150)            e.description  = "Max 150 words";
     setErrors(e);
     return Object.keys(e).length === 0;
   };
-
+ 
   const handleSave = async () => {
     if (!validate()) return;
     setSaving(true);
     try {
       const res  = await fetch(`${API}/api/renewals/${renewal.id}`, {
-        method: "PUT", headers: { "Content-Type": "application/json" },
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...form, endDate }),
       });
       const data = await res.json();
       if (data.success) { onSaved(); onClose(); }
       else alert(`❌ ${data.message}`);
-    } catch (err) { alert("❌ Failed to save"); console.error(err); }
-    finally { setSaving(false); }
+    } catch (err) {
+      alert("❌ Failed to save");
+      console.error(err);
+    } finally {
+      setSaving(false);
+    }
   };
-
-  const inp = (name, extra = {}) => ({ border: `1.5px solid ${errors[name] ? "#EF4444" : "#E5E7EB"}`, borderRadius: 8, padding: "8px 12px", fontSize: 13, color: "#111", outline: "none", width: "100%", boxSizing: "border-box", fontFamily: "inherit", ...extra });
-  const sel = (name) => ({ ...inp(name), cursor: "pointer", background: "#fff", appearance: "none", backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236B7280' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E")`, backgroundRepeat: "no-repeat", backgroundPosition: "right 10px center", paddingRight: 32 });
-  const ro  = (extra = {}) => inp("", { background: "#F9FAFB", color: "#6B7280", ...extra });
-
+ 
+  // ── style helpers ────────────────────────────────────────────────────────
+  const inp = (name, extra = {}) => ({
+    border: `1.5px solid ${errors[name] ? "#EF4444" : "#E5E7EB"}`,
+    borderRadius: 8, padding: "8px 12px", fontSize: 13, color: "#111",
+    outline: "none", width: "100%", boxSizing: "border-box", fontFamily: "inherit", ...extra,
+  });
+  const sel = (name) => ({
+    ...inp(name), cursor: "pointer", background: "#fff", appearance: "none",
+    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236B7280' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E")`,
+    backgroundRepeat: "no-repeat", backgroundPosition: "right 10px center", paddingRight: 32,
+  });
+  const ro = (extra = {}) => inp("", { background: "#F9FAFB", color: "#6B7280", ...extra });
+ 
+  const eg2 = { display: "grid", gridTemplateColumns: "1fr 1fr",     gap: 14 };
+  const eg3 = { display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 14 };
+ 
   return (
-    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 2147483647, display: "flex", alignItems: "center", justifyContent: "center", padding: "24px 16px" }}>
-      <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 16, width: "100%", maxWidth: 780, maxHeight: "90vh", overflowY: "auto", boxShadow: "0 24px 64px rgba(0,0,0,0.25)" }}>
-
-        {/* Header */}
-        <div style={{ background: LIME, borderRadius: "16px 16px 0 0", padding: "16px 24px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+    <div
+      onClick={onClose}
+      style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)",
+               backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)",
+               zIndex: 2147483647, display: "flex", alignItems: "center",
+               justifyContent: "center", padding: "24px 16px" }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{ background: "#fff", borderRadius: 16, width: "100%", maxWidth: 820,
+                 maxHeight: "90vh", overflowY: "auto",
+                 boxShadow: "0 24px 64px rgba(0,0,0,0.25)" }}
+      >
+ 
+        {/* ── Header ── */}
+        <div style={{ background: LIME, borderRadius: "16px 16px 0 0", padding: "16px 24px",
+                      display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div>
             <div style={{ fontSize: 15, fontWeight: 700, color: "#fff" }}>Edit Renewal</div>
-            <div style={{ fontSize: 12, color: "#bfdbfe", marginTop: 2 }}>{renewal.id} · {renewal.itemName}</div>
-          </div>
-          <button onClick={onClose} style={{ background: "rgba(255,255,255,0.2)", border: "none", borderRadius: 8, width: 32, height: 32, cursor: "pointer", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff" }}>✕</button>
-        </div>
-
-        <div style={{ padding: 24, display: "flex", flexDirection: "column", gap: 20 }}>
-
-          <MSection title="Renewal Details">
-            {/* Row 1: Item ID + Category */}
-            <div style={g2}>
-              <MField label="Item ID">
-                <input value={renewal.id} readOnly style={ro()} />
-              </MField>
-              <MField label="Category *" error={errors.category}>
-                <select value={form.category} onChange={e => { set("category", e.target.value); set("subcategory", ""); }} style={sel("category")}>
-                  <option value="">Choose</option>
-                  {/* Fallback: keep existing value visible even if categories haven't loaded/matched */}
-                  {form.category && !categories.find(c => c.name === form.category) && (
-                    <option value={form.category}>{form.category}</option>
-                  )}
-                  {categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
-                </select>
-              </MField>
+            <div style={{ fontSize: 12, color: "#bfdbfe", marginTop: 2 }}>
+              {renewal.id} · {renewal.itemName}
             </div>
-
-            {/* Subcategory — always visible */}
+          </div>
+          <button
+            onClick={onClose}
+            style={{ background: "rgba(255,255,255,0.2)", border: "none", borderRadius: 8,
+                     width: 32, height: 32, cursor: "pointer", fontSize: 16, display: "flex",
+                     alignItems: "center", justifyContent: "center", color: "#fff" }}
+          >✕</button>
+        </div>
+ 
+        <div style={{ padding: 24, display: "flex", flexDirection: "column", gap: 20 }}>
+ 
+          {/* ══════════════════════════════════════════════════════════════
+              SECTION 1 — Item Details
+          ══════════════════════════════════════════════════════════════ */}
+          <ESection title="📋 Item Details">
+ 
+            {/* Row: Item ID + Category */}
+            <div style={eg2}>
+              <EField label="Item ID">
+                <input value={renewal.id} readOnly style={ro()} />
+              </EField>
+              <EField label="Category *" error={errors.category}>
+              <select
+                value={form.category}
+                onChange={e => { set("category", e.target.value); set("subcategory", ""); }}
+                style={sel("category")}
+              >
+                <option value="">Choose category</option>
+                {categories.length === 0 && form.category && (
+                  <option value={form.category}>{form.category} (loading...)</option>
+                )}
+                {form.category && categories.length > 0 && !categories.find(c => c.name === form.category) && (
+                  <option value={form.category}>{form.category}</option>
+                )}
+                {categories.map(c => (
+                  <option key={c.id} value={c.name}>{c.name}</option>
+                ))}
+              </select>
+            </EField>
+            </div>
+ 
+            {/* Subcategory — always rendered, options come from selected category */}
             <div style={{ marginTop: 14 }}>
-              <MField label="Subcategory">
-                <select value={form.subcategory} onChange={e => set("subcategory", e.target.value)} style={sel("")}>
+              <EField label="Subcategory">
+                <select
+                  value={form.subcategory}
+                  onChange={e => set("subcategory", e.target.value)}
+                  style={sel("")}
+                >
                   <option value="">None</option>
-                  {/* Fallback: keep existing subcategory visible even if subcats list is empty */}
                   {form.subcategory && !subcats.find(s => s.name === form.subcategory) && (
                     <option value={form.subcategory}>{form.subcategory}</option>
                   )}
-                  {subcats.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
+                  {subcats.map(s => (
+                    <option key={s.id} value={s.name}>{s.name}</option>
+                  ))}
                 </select>
-              </MField>
+              </EField>
             </div>
-
-            {/* Row 2: Item Name + Vendor + Authority */}
-            <div style={{ ...g2, marginTop: 14 }}>
-              <MField label="Item Name *" error={errors.itemName}>
-                <input value={form.itemName} onChange={e => set("itemName", e.target.value)} style={inp("itemName")} />
-              </MField>
-              <MField label="Vendor">
-                <input value={form.vendor} onChange={e => set("vendor", e.target.value)} style={inp("")} />
-              </MField>
-              <MField label="Authority">
-                <input value={form.authority || ""} onChange={e => set("authority", e.target.value)} style={inp("")} />
-              </MField>
+ 
+            {/* Row: Item Name + Vendor + Authority + Service Link */}
+            <div style={{ ...eg2, marginTop: 14 }}>
+              <EField label="Item Name *" error={errors.itemName}>
+                <input
+                  value={form.itemName}
+                  onChange={e => set("itemName", e.target.value)}
+                  style={inp("itemName")}
+                />
+              </EField>
+              <EField label="Vendor">
+                <input
+                  value={form.vendor}
+                  onChange={e => set("vendor", e.target.value)}
+                  style={inp("")}
+                />
+              </EField>
+              <EField label="Authority">
+                <input
+                  value={form.authority}
+                  onChange={e => set("authority", e.target.value)}
+                  style={inp("")}
+                />
+              </EField>
+              <EField label="Service Link">
+                <input
+                  type="url"
+                  value={form.serviceLink}
+                  onChange={e => set("serviceLink", e.target.value)}
+                  style={inp("")}
+                  placeholder="https://..."
+                />
+              </EField>
             </div>
-
+ 
+            {/* Description */}
             <div style={{ marginTop: 14 }}>
-              <MField label="Description" error={errors.description}>
-                <textarea value={form.description} onChange={e => set("description", e.target.value)} style={{ ...inp("description"), resize: "vertical", minHeight: 70 }} />
-                <div style={{ fontSize: 11, color: words > 150 ? "#EF4444" : "#9CA3AF", textAlign: "right", marginTop: 2 }}>{words} / 150 words</div>
-              </MField>
+              <EField label="Description & Remarks" error={errors.description}>
+                <textarea
+                  value={form.description}
+                  onChange={e => set("description", e.target.value)}
+                  style={{ ...inp("description"), resize: "vertical", minHeight: 70 }}
+                />
+                <div style={{ fontSize: 11, color: words > 150 ? "#EF4444" : "#9CA3AF",
+                              textAlign: "right", marginTop: 2 }}>
+                  {words} / 150 words
+                </div>
+              </EField>
             </div>
-          </MSection>
-
-          <MSection title="Renewer Details">
-              <MField label="Select Renewer">
-                <select
-                  value={form.selectedRenewerId || ""}
-                  onChange={e => handleRenewerSelect(e.target.value)}
-                  style={sel("")}
-                >
-                  <option value="">Select renewer</option>
-                  {employees
-                    .slice()
-                    .sort((a, b) =>
-                      (a.Designation || "").localeCompare(b.Designation || "") ||
-                      (a.Emp_name    || "").localeCompare(b.Emp_name    || "")
-                    )
-                    .map(em => (
-                      <option key={em._id} value={em._id}>
-                        {em.Designation ? `${em.Designation} — ` : ""}{em.Emp_name}
-                      </option>
-                    ))}
-                </select>
-              </MField>
-              <div style={{ ...g3, marginTop: 14 }}>
-                <MField label="Renewer Name">
-                  <input value={form.renewerName || ""} readOnly style={ro()} />
-                </MField>
-                <MField label="Department">
-                  <input value={form.renewerDepartment || ""} readOnly style={ro()} />
-                </MField>
-                <MField label="Email">
-                  <input value={form.renewerEmail || ""} readOnly style={ro()} />
-                </MField>
+ 
+            {/* Credentials */}
+            <div style={{ marginTop: 14, background: "#FFF7ED", border: "1px solid #FED7AA",
+                          borderRadius: 10, padding: 14 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: "#92400E", marginBottom: 12 }}>
+                🔐 Credentials{" "}
+                <span style={{ fontSize: 11, fontWeight: 400, color: "#B45309" }}>
+                  (visible to renewer only)
+                </span>
               </div>
-            </MSection>
-
-          <MSection title="User Details">
-            <MField label="Employee">
-              <select value={form.selectedEmployeeId} onChange={e => handleEmployeeSelect(e.target.value)} style={sel("")}>
-                <option value="">Select employee</option>
-                {employees.map(em => <option key={em._id} value={em._id}>{em.Emp_name}</option>)}
+              <div style={eg2}>
+                <EField label="Username">
+                  <input
+                    value={form.credentialUsername}
+                    onChange={e => set("credentialUsername", e.target.value)}
+                    style={inp("")}
+                    placeholder="admin@example.com"
+                  />
+                </EField>
+                <EField label="Password (confidential)">
+                  <div style={{ position: "relative" }}>
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      value={form.credentialPassword}
+                      onChange={e => set("credentialPassword", e.target.value)}
+                      style={{ ...inp(""), paddingRight: 44 }}
+                      placeholder="••••••••"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(p => !p)}
+                      style={{ position: "absolute", right: 10, top: "50%",
+                               transform: "translateY(-50%)", background: "none",
+                               border: "none", cursor: "pointer", fontSize: 14, color: "#6B7280" }}
+                    >
+                      {showPassword ? "🙈" : "👁️"}
+                    </button>
+                  </div>
+                </EField>
+              </div>
+            </div>
+ 
+            {/* Attachments */}
+            <div style={{ marginTop: 14 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: "#374151", marginBottom: 10 }}>
+                📎 Attachments (optional)
+              </div>
+              {[1, 2].map(n => (
+                <div key={n} style={{ marginBottom: n === 1 ? 12 : 0 }}>
+                  <EField label={`Attachment ${n}`}>
+                    <input
+                      type="url"
+                      value={form[`attachment${n}Link`]}
+                      onChange={e => set(`attachment${n}Link`, e.target.value)}
+                      style={inp("")}
+                      placeholder="Paste a Drive / web link"
+                    />
+                  </EField>
+                </div>
+              ))}
+            </div>
+ 
+          </ESection>
+ 
+          {/* ══════════════════════════════════════════════════════════════
+              SECTION 2 — Renewer Details
+          ══════════════════════════════════════════════════════════════ */}
+          <ESection title="👤 Renewer Details">
+            <EField label="Select Renewer">
+              <select
+                value={form.selectedRenewerId}
+                onChange={e => handleRenewerSelect(e.target.value)}
+                style={sel("")}
+              >
+                <option value="">Select renewer</option>
+                {employees
+                  .slice()
+                  .sort((a, b) =>
+                    (a.Designation || "").localeCompare(b.Designation || "") ||
+                    (a.Emp_name    || "").localeCompare(b.Emp_name    || "")
+                  )
+                  .map(em => (
+                    <option key={em._id} value={em._id}>
+                      {em.Designation ? `${em.Designation} — ` : ""}{em.Emp_name}
+                    </option>
+                  ))}
               </select>
-            </MField>
-            <div style={{ ...g2, marginTop: 14 }}>
-              <MField label="Employee ID"><input value={form.empId} readOnly style={ro()} /></MField>
-              <MField label="Department"><input value={form.department} readOnly style={ro()} /></MField>
-              <MField label="Designation"><input value={form.designation} readOnly style={ro()} /></MField>
-              <MField label="Email"><input value={form.email} readOnly style={ro()} /></MField>
-              <MField label="Reporting Manager"><input value={form.reportingManager} readOnly style={ro()} /></MField>
+            </EField>
+            <div style={{ ...eg3, marginTop: 14 }}>
+              <EField label="Renewer Name">
+                <input value={form.renewerName}       readOnly style={ro()} />
+              </EField>
+              <EField label="Department">
+                <input value={form.renewerDepartment} readOnly style={ro()} />
+              </EField>
+              <EField label="Email">
+                <input value={form.renewerEmail}      readOnly style={ro()} />
+              </EField>
             </div>
-          </MSection>
-
-          <MSection title="Reminders">
-            <div style={g3}>
-              <MField label="Start Date *" error={errors.startDate}>
-                <input type="date" value={form.startDate} onChange={e => set("startDate", e.target.value)} style={inp("startDate")} />
-              </MField>
-              <MField label="End Date (auto)">
-                <input value={endDate ? fmtDate(endDate) : ""} readOnly style={ro({ color: "#059669" })} />
-              </MField>
-              <MField label="Frequency *" error={errors.frequency}>
-                <select value={form.frequency} onChange={e => set("frequency", e.target.value)} style={sel("frequency")}>
-                  <option value="">Select</option>
-                  {Object.keys(FREQ_MONTHS).map(f => <option key={f} value={f}>{f}</option>)}
+          </ESection>
+ 
+          {/* ══════════════════════════════════════════════════════════════
+              SECTION 3 — User Details
+          ══════════════════════════════════════════════════════════════ */}
+          <ESection title="👤 User Details">
+            <EField label="Employee">
+              <select
+                value={form.selectedEmployeeId}
+                onChange={e => handleEmployeeSelect(e.target.value)}
+                style={sel("")}
+              >
+                <option value="">Select employee</option>
+                {employees
+                  .slice()
+                  .sort((a, b) =>
+                    (a.Designation || "").localeCompare(b.Designation || "") ||
+                    (a.Emp_name    || "").localeCompare(b.Emp_name    || "")
+                  )
+                  .map(em => (
+                    <option key={em._id} value={em._id}>
+                      {em.Designation ? `${em.Designation} — ` : ""}{em.Emp_name}
+                    </option>
+                  ))}
+              </select>
+            </EField>
+            <div style={{ ...eg2, marginTop: 14 }}>
+              <EField label="Employee ID">
+                <input value={form.empId}           readOnly style={ro()} />
+              </EField>
+              <EField label="Department">
+                <input value={form.department}       readOnly style={ro()} />
+              </EField>
+              <EField label="Designation">
+                <input value={form.designation}      readOnly style={ro()} />
+              </EField>
+              <EField label="Email">
+                <input value={form.email}            readOnly style={ro()} />
+              </EField>
+              <EField label="Reporting Manager">
+                <input value={form.reportingManager} readOnly style={ro()} />
+              </EField>
+            </div>
+ 
+            {/* CC multi-select */}
+            <div style={{ marginTop: 14 }}>
+              <EField label="CC To (send mail)">
+                <div style={{ position: "relative" }} data-cc-dropdown>
+                  <div
+                    onClick={() => setCcOpen(o => !o)}
+                    style={{ ...inp(""), cursor: "pointer", minHeight: 42, height: "auto",
+                             display: "flex", flexWrap: "wrap", gap: 8,
+                             alignItems: "flex-start", padding: "8px 12px", overflow: "visible" }}
+                  >
+                    {form.ccRecipients.length === 0 && (
+                      <span style={{ color: "#9CA3AF" }}>Select people to CC…</span>
+                    )}
+                    {form.ccRecipients.map(c => (
+                      <span
+                        key={c.id}
+                        style={{ background: "#DBEAFE", color: "#1e40af", padding: "4px 10px",
+                                 borderRadius: 12, fontSize: 12, fontWeight: 600, display: "flex",
+                                 alignItems: "center", gap: 6, whiteSpace: "normal",
+                                 wordBreak: "break-word", lineHeight: 1.4 }}
+                      >
+                        {c.name}
+                        <span
+                          onClick={e => {
+                            e.stopPropagation();
+                            toggleCC({ _id: c.id, Emp_name: c.name, "desig Email Id": c.email });
+                          }}
+                          style={{ cursor: "pointer", fontWeight: 700 }}
+                        >×</span>
+                      </span>
+                    ))}
+                  </div>
+ 
+                  {ccOpen && (
+                    <div style={{ position: "absolute", top: "100%", left: 0, right: 0,
+                                  background: "#fff", border: "1.5px solid #E5E7EB",
+                                  borderRadius: 8, zIndex: 1000,
+                                  boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
+                                  maxHeight: 240, overflowY: "auto" }}>
+                      <div style={{ padding: "8px 10px", borderBottom: "1px solid #F3F4F6" }}>
+                        <input
+                          autoFocus
+                          value={ccSearch}
+                          onChange={e => setCcSearch(e.target.value)}
+                          placeholder="Search by name or designation…"
+                          style={{ ...inp(""), fontSize: 13 }}
+                          onClick={e => e.stopPropagation()}
+                        />
+                      </div>
+                      {ccFiltered.length === 0 && (
+                        <div style={{ padding: "12px 14px", color: "#9CA3AF", fontSize: 13 }}>
+                          No results
+                        </div>
+                      )}
+                      {ccFiltered.map(em => {
+                        const selected = form.ccRecipients.find(c => c.id === em._id);
+                        return (
+                          <div
+                            key={em._id}
+                            onClick={() => toggleCC(em)}
+                            style={{ padding: "10px 14px", cursor: "pointer", display: "flex",
+                                     alignItems: "center", gap: 10,
+                                     background: selected ? "#EFF6FF" : "transparent" }}
+                            onMouseEnter={e => e.currentTarget.style.background = selected ? "#DBEAFE" : "#F9FAFB"}
+                            onMouseLeave={e => e.currentTarget.style.background = selected ? "#EFF6FF" : "transparent"}
+                          >
+                            <div style={{ width: 18, height: 18, borderRadius: 4,
+                                          border: `2px solid ${selected ? LIME : "#D1D5DB"}`,
+                                          background: selected ? LIME : "#fff", display: "flex",
+                                          alignItems: "center", justifyContent: "center",
+                                          flexShrink: 0 }}>
+                              {selected && (
+                                <span style={{ color: "#fff", fontSize: 11, fontWeight: 700 }}>✓</span>
+                              )}
+                            </div>
+                            <div>
+                              <div style={{ fontSize: 13, fontWeight: 600, color: "#111" }}>
+                                {em.Emp_name}
+                              </div>
+                              <div style={{ fontSize: 11, color: "#9CA3AF" }}>
+                                {em.Designation || ""}
+                                {em["desig Email Id"] ? ` · ${em["desig Email Id"]}` : ""}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                      <div style={{ padding: "8px 14px", borderTop: "1px solid #F3F4F6",
+                                    display: "flex", justifyContent: "flex-end" }}>
+                        <button
+                          onClick={() => setCcOpen(false)}
+                          style={{ fontSize: 12, color: LIME, background: "none",
+                                   border: "none", cursor: "pointer", fontWeight: 600 }}
+                        >Done</button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                {form.ccRecipients.length > 0 && (
+                  <div style={{ fontSize: 11, color: "#6B7280", marginTop: 4 }}>
+                    {form.ccRecipients.length} person{form.ccRecipients.length > 1 ? "s" : ""} selected
+                  </div>
+                )}
+              </EField>
+            </div>
+ 
+            {/* Warranty user fields */}
+            {form.category === "Warranty" && (
+              <div style={{ ...eg2, marginTop: 14 }}>
+                <EField label="Assigned User">
+                  <select
+                    value={form.userPerson}
+                    onChange={e => {
+                      const emp = employees.find(em => em.Emp_name === e.target.value);
+                      setForm(f => ({ ...f, userPerson: e.target.value, userDepartment: emp?.Department || "" }));
+                    }}
+                    style={sel("")}
+                  >
+                    <option value="">Choose user</option>
+                    {employees.map(em => (
+                      <option key={em._id} value={em.Emp_name}>{em.Emp_name}</option>
+                    ))}
+                  </select>
+                </EField>
+                <EField label="User Department">
+                  <input value={form.userDepartment} readOnly style={ro()} />
+                </EField>
+              </div>
+            )}
+          </ESection>
+ 
+          {/* ══════════════════════════════════════════════════════════════
+              SECTION 4 — Reminders
+          ══════════════════════════════════════════════════════════════ */}
+          <ESection title="🔔 Reminders">
+            <div style={eg3}>
+ 
+              <EField label="Start Date *" error={errors.startDate}>
+                <input
+                  type="date"
+                  value={form.startDate}
+                  onChange={e => set("startDate", e.target.value)}
+                  style={inp("startDate")}
+                />
+              </EField>
+ 
+              <EField label="Renewal Frequency *" error={errors.frequency}>
+                <select
+                  value={form.frequency}
+                  onChange={e => set("frequency", e.target.value)}
+                  style={sel("frequency")}
+                >
+                  <option value="">Select frequency</option>
+                  <option value="Monthly">Monthly</option>
+                  <option value="Quarterly">Quarterly</option>
+                  <option value="Half Yearly">Half Yearly</option>
+                  <option value="Annually">Annually</option>
+                  <option value="Other">Other (Custom Date)</option>
                 </select>
-              </MField>
-              <MField label="1st Reminder (days before)"><input type="number" min="0" value={form.reminder1Days} onChange={e => set("reminder1Days", +e.target.value)} style={inp("")} /></MField>
-              <MField label="2nd Reminder (days before)"><input type="number" min="0" value={form.reminder2Days} onChange={e => set("reminder2Days", +e.target.value)} style={inp("")} /></MField>
-              <MField label="Final Reminder (days before)"><input type="number" min="0" value={form.reminderFinalDays} onChange={e => set("reminderFinalDays", +e.target.value)} style={inp("")} /></MField>
+              </EField>
+ 
+              {/* Duration — only for Monthly / Annually */}
+              {["Monthly", "Annually"].includes(form.frequency) &&
+                FREQ_COUNT_OPTIONS[form.frequency] && (
+                  <EField label={`Duration (${form.frequency})`}>
+                    <select
+                      value={form.frequencyCount}
+                      onChange={e => set("frequencyCount", +e.target.value)}
+                      style={sel("")}
+                    >
+                      {FREQ_COUNT_OPTIONS[form.frequency].map(opt => (
+                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                      ))}
+                    </select>
+                  </EField>
+              )}
+ 
+              {/* Custom end date for "Other" */}
+              {form.frequency === "Other" && (
+                <EField label="Service End Date *" error={errors.customEndDate}>
+                  <input
+                    type="date"
+                    value={form.customEndDate}
+                    onChange={e => set("customEndDate", e.target.value)}
+                    style={inp("customEndDate")}
+                  />
+                </EField>
+              )}
+ 
+              <EField label="End Date (auto-calculated)">
+                <input
+                  value={endDate ? fmtDate(endDate) : ""}
+                  readOnly
+                  style={ro({ color: "#059669" })}
+                  placeholder="Set start date & frequency"
+                />
+              </EField>
+ 
+              <EField label="1st Reminder (days before)">
+                <input
+                  type="number" min="0"
+                  value={form.reminder1Days}
+                  onChange={e => set("reminder1Days", +e.target.value)}
+                  style={inp("")}
+                />
+              </EField>
+              <EField label="2nd Reminder (days before)">
+                <input
+                  type="number" min="0"
+                  value={form.reminder2Days}
+                  onChange={e => set("reminder2Days", +e.target.value)}
+                  style={inp("")}
+                />
+              </EField>
+              <EField label="Final Reminder (days before)">
+                <input
+                  type="number" min="0"
+                  value={form.reminderFinalDays}
+                  onChange={e => set("reminderFinalDays", +e.target.value)}
+                  style={inp("")}
+                />
+              </EField>
             </div>
+ 
+            {/* Reminder preview */}
             {endDate && (
-              <div style={{ marginTop: 14, background: "#EFF6FF", border: "1px solid #BFDBFE", borderRadius: 10, padding: "12px 16px" }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: "#1e40af", marginBottom: 10 }}>📅 Reminder Preview</div>
+              <div style={{ marginTop: 14, background: "#EFF6FF", border: "1px solid #BFDBFE",
+                            borderRadius: 10, padding: "12px 16px" }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: "#1e40af", marginBottom: 10 }}>
+                  📅 Reminder Preview
+                </div>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 12 }}>
                   {[
-                    { label: "End Date",                             date: endDate,                       color: "#059669" },
-                    { label: `1st (${form.reminder1Days}d before)`,  date: rDate(form.reminder1Days),     color: "#374151" },
-                    { label: `2nd (${form.reminder2Days}d before)`,  date: rDate(form.reminder2Days),     color: "#374151" },
-                    { label: `Final (${form.reminderFinalDays}d)`,   date: rDate(form.reminderFinalDays), color: "#374151" },
+                    { label: "End Date",                              date: endDate,                        color: "#059669" },
+                    { label: `1st (${form.reminder1Days}d before)`,   date: rDate(form.reminder1Days),      color: "#374151" },
+                    { label: `2nd (${form.reminder2Days}d before)`,   date: rDate(form.reminder2Days),      color: "#374151" },
+                    { label: `Final (${form.reminderFinalDays}d)`,    date: rDate(form.reminderFinalDays),  color: "#374151" },
                   ].map(({ label, date, color }) => (
                     <div key={label} style={{ textAlign: "center" }}>
-                      <div style={{ fontSize: 10, color: "#6B7280", marginBottom: 3, fontWeight: 600 }}>{label}</div>
-                      <div style={{ fontSize: 12, fontWeight: 700, color }}>{fmtDate(date)}</div>
+                      <div style={{ fontSize: 10, color: "#6B7280", marginBottom: 3, fontWeight: 600 }}>
+                        {label}
+                      </div>
+                      <div style={{ fontSize: 12, fontWeight: 700, color }}>
+                        {fmtDate(date)}
+                      </div>
                     </div>
                   ))}
                 </div>
               </div>
             )}
-          </MSection>
-
-          <MSection title="Additional Details">
-            <div style={g2}>
-              <MField label="Remarks"><input value={form.remarks} onChange={e => set("remarks", e.target.value)} style={inp("")} /></MField>
-              <MField label="Website Link"><input type="url" value={form.link} onChange={e => set("link", e.target.value)} style={inp("")} placeholder="https://..." /></MField>
-            </div>
-            {form.category === "Warranty" && (
-              <div style={{ ...g2, marginTop: 14 }}>
-                <MField label="Assigned User">
-                  <select value={form.userPerson} onChange={e => { const emp = employees.find(em => em.Emp_name === e.target.value); setForm(f => ({ ...f, userPerson: e.target.value, userDepartment: emp?.Department || "" })); }} style={sel("")}>
-                    <option value="">Choose user</option>
-                    {employees.map(em => <option key={em._id} value={em.Emp_name}>{em.Emp_name}</option>)}
-                  </select>
-                </MField>
-                <MField label="User Department"><input value={form.userDepartment} readOnly style={ro()} /></MField>
-              </div>
-            )}
-          </MSection>
-
-          <MSection title="Attachments (optional)">
-            {[1, 2].map(n => (
-              <div key={n}>
-                <div style={{ fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 8 }}>Attachment {n}</div>
-                <input type="url" value={form[`attachment${n}Link`]} onChange={e => set(`attachment${n}Link`, e.target.value)} style={{ ...inp(""), marginBottom: n === 1 ? 14 : 0 }} placeholder="Paste a Drive / web link" />
-              </div>
-            ))}
-          </MSection>
-
+          </ESection>
+ 
+ 
+          {/* ── Footer ── */}
           <div style={{ display: "flex", justifyContent: "flex-end", gap: 12, paddingTop: 8 }}>
             <button onClick={onClose} style={cancelStyle}>Cancel</button>
-            <button onClick={handleSave} disabled={saving} style={{ ...saveStyle, opacity: saving ? 0.7 : 1 }}>
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              style={{ ...saveStyle, opacity: saving ? 0.7 : 1, cursor: saving ? "not-allowed" : "pointer" }}
+            >
               {saving ? "Saving..." : "💾 Save Changes"}
             </button>
           </div>
+ 
         </div>
       </div>
+    </div>
+  );
+}
+ 
+// ─────────────────────────────────────────────────────────────────────────────
+// ESection + EField — local sub-components for EditModal
+// Add these to dashboard.jsx near MSection / MField
+// ─────────────────────────────────────────────────────────────────────────────
+ 
+function ESection({ title, children }) {
+  return (
+    <div style={{ border: "1px solid #F3F4F6", borderRadius: 10, overflow: "visible" }}>
+      <div style={{ background: "#F9FAFB", padding: "8px 16px", fontSize: 12, fontWeight: 700,
+                    color: "#374151", borderBottom: "1px solid #F3F4F6" }}>
+        {title}
+      </div>
+      <div style={{ padding: 16 }}>{children}</div>
+    </div>
+  );
+}
+ 
+function EField({ label, error, children }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+      <label style={{ fontSize: 11, fontWeight: 600, color: "#6B7280" }}>{label}</label>
+      {children}
+      {error && <span style={{ fontSize: 11, color: "#EF4444" }}>{error}</span>}
     </div>
   );
 }
