@@ -793,6 +793,21 @@ export default function Dashboard({ categories = [], onNew, onEdit, onSelect, on
 
   useEffect(() => { fetchRenewals(); }, [fetchRenewals]);
 
+  useEffect(() => {
+  const params = new URLSearchParams(window.location.search);
+  const itemId = params.get("update");
+
+  if(itemId && renewals.length){
+    const item = renewals.find(r => r.id === itemId);
+
+    if(item){
+      setUpdateItem(item);
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }
+
+}, [renewals]);
+
   const handleCreateSaved = () => {
     setCreateMode(false);
     fetchRenewals();

@@ -374,7 +374,7 @@ const visibleEvents = events.filter((e) => {
         title="Renewal Events"
         subtitle="All recorded renewal events across items"
         breadcrumb={[{ label: "Dashboard", onClick: onBack }, { label: "Renewal Events" }]}
-        actions={<NavbarButton onClick={() => setShowUpdateForm(true)} icon="✏️" label="Update Renewals" />}
+        
       />
 
       {/* ── Stats ── */}

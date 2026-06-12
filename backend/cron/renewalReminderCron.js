@@ -23,11 +23,15 @@ function toMidnight(d) {
 
 // ── Runs every day at 9:00 AM ──────────────────────────
 // For debug: change to "* * * * *"
-cron.schedule("0 9 * * *", async () => {
+cron.schedule(
+  "0 9 * * *",
+  async () => {
   console.log("\n=================================");
   console.log("⏰ RENEWAL REMINDER CRON FIRED");
   console.log("TIME:", new Date().toLocaleString("en-IN"));
   console.log("=================================\n");
+
+  
 
   try {
     const renewals = await Newrenewal.find({
@@ -101,4 +105,9 @@ cron.schedule("0 9 * * *", async () => {
   console.log("\n=================================");
   console.log("✅ CRON COMPLETE");
   console.log("=================================\n");
-});
+
+  },
+  {
+    timezone: "Asia/Kolkata",
+  }
+);

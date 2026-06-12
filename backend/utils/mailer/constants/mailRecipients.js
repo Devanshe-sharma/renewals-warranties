@@ -1,15 +1,15 @@
 module.exports = {
 
   ADMIN: [
-    "admin@briskolive.com",
+    "Software.developer@briskolive.com",
   ],
 
   MANAGEMENT: [
-    "Management@briskolive.com",
+    "Software.developer@briskolive.com",
   ],
 
   AUTOMATION: [
-    "da.automation@briskolive.com",
+    "Software.developer@briskolive.com",
   ],
 
 };

@@ -1,70 +1,86 @@
 module.exports = (renewal) => {
 
-  return `
+const updateLink =
+`http://3.110.162.1:3004/renewals?update=${renewal.item_id}`;
 
-  <html>
 
-    <body style="font-family: Arial, sans-serif; line-height:1.6;">
+return `
 
-      <h2 style="color:#f59e0b;">
-        ⚠️ 2nd Reminder - Renewal Approaching
-      </h2>
+<html>
+<body style="font-family:Arial;background:#f5f7fb;padding:30px">
 
-      <p>
-        This is the second reminder regarding the following renewal item.
-      </p>
 
-      <table border="1" cellpadding="10" cellspacing="0">
+<h2 style="color:#f59e0b">
+⚠️ Renewal Reminder - 2nd Notice
+</h2>
 
-        <tr>
-          <td><b>Item ID</b></td>
-          <td>${renewal.item_id || "-"}</td>
-        </tr>
 
-        <tr>
-          <td><b>Item Name</b></td>
-          <td>${renewal.item_name || "-"}</td>
-        </tr>
+<p>
+This renewal is approaching its expiry date.
+Kindly review and update the renewal details.
+</p>
 
-        <tr>
-          <td><b>Category</b></td>
-          <td>${renewal.category || "-"}</td>
-        </tr>
 
-        <tr>
-          <td><b>Renewer</b></td>
-          <td>${renewal.renewer_name || "-"}</td>
-        </tr>
+<table border="1" cellpadding="10" cellspacing="0">
 
-        <tr>
-          <td><b>End Date</b></td>
-          <td>
-            ${
-              renewal.end_date
-                ? new Date(renewal.end_date).toLocaleDateString("en-IN")
-                : "-"
-            }
-          </td>
-        </tr>
+<tr>
+<td><b>Item</b></td>
+<td>${renewal.item_name || "-"}</td>
+</tr>
 
-      </table>
 
-      <br/>
+<tr>
+<td><b>Category</b></td>
+<td>${renewal.category || "-"}</td>
+</tr>
 
-      <p>
-        Renewal date is approaching soon. Kindly complete the process at the earliest.
-      </p>
 
-      <br/>
+<tr>
+<td><b>Renewer</b></td>
+<td>${renewal.renewer_name || "-"}</td>
+</tr>
 
-      <p>
-        Regards,<br/>
-        Brisk Olive Admin Team
-      </p>
 
-    </body>
+<tr>
+<td><b>Expiry Date</b></td>
+<td>
+${
+renewal.end_date
+? new Date(renewal.end_date).toLocaleDateString("en-IN")
+:"-"
+}
+</td>
+</tr>
 
-  </html>
+</table>
 
-  `;
+
+<br>
+
+
+<a href="${updateLink}"
+style="
+background:#2563eb;
+color:white;
+padding:12px 18px;
+border-radius:6px;
+text-decoration:none;
+">
+
+Update Renewal
+
+</a>
+
+
+<br><br>
+
+Regards,<br>
+Brisk Olive Admin Team
+
+
+</body>
+</html>
+
+`;
+
 };

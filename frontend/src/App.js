@@ -67,6 +67,20 @@ function AppContent() {
           />
 
           <Route
+            path="/renewals"
+            element={
+              <Dashboard
+                onNew={() =>
+                  navigate("/new")
+                }
+                onNavigateUpdateForm={() =>
+                  navigate("/updaterenewal")
+                }
+              />
+            }
+          />
+
+          <Route
             path="/new"
             element={
               <NewForm
