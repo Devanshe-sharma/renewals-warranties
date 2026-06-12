@@ -1,5 +1,5 @@
 // renewalReminder3Template.js
-module.exports = (renewal) => {
+module.exports = (renewal, score = 0) => {
   const fmtDate = (d) =>
     d ? new Date(d).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "—";
 
@@ -27,6 +27,22 @@ module.exports = (renewal) => {
       <div style="background: #FEF2F2; border-left: 4px solid #DC2626; padding: 14px 20px;">
         <p style="margin: 0; font-size: 14px; color: #991B1B;">${urgencyText} Previous reminders have been sent and no renewal has been recorded.</p>
       </div>
+
+      <!-- Score Banner -->
+        <div style="background: #FEF2F2; border: 1px solid #FECACA; border-radius: 8px; margin: 16px 28px 0; padding: 14px 20px; display: flex; align-items: center; gap: 16px;">
+          <div style="text-align: center; background: #7F1D1D; color: #fff; border-radius: 8px; padding: 8px 18px;">
+            <div style="font-size: 26px; font-weight: 800; line-height: 1;">${score}</div>
+            <div style="font-size: 10px; margin-top: 2px; opacity: 0.85;">SCORE</div>
+          </div>
+          <div>
+            <p style="margin: 0; font-size: 14px; font-weight: 700; color: #991B1B;">
+              ${Math.abs(score)} day${Math.abs(score) !== 1 ? "s" : ""} overdue
+            </p>
+            <p style="margin: 4px 0 0; font-size: 13px; color: #7F1D1D;">
+              Score drops by 1 for every day past the deadline.
+            </p>
+          </div>
+        </div>
 
       <!-- Item Details -->
       <div style="padding: 24px 28px;">

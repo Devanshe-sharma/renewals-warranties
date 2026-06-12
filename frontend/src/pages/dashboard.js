@@ -95,6 +95,43 @@ export function computeStatus(renewal, latestEvent = null) {
   return "not_yet_due";
 }
 
+// computeItemScore — returns a number (0 or negative)
+export function computeItemScore(renewal, latestEvent, allEvents = []) {
+  const today = toDay(new Date());
+
+  // ── done_delayed: renewed but after the deadline ──
+  // Find the most recent "Yes" event and check if it was late
+  if (latestEvent && latestEvent.renewal_required === "Yes") {
+    const prevExpiry  = latestEvent.prev_expiry_date ? toDay(new Date(latestEvent.prev_expiry_date)) : null;
+    const renewedOn   = latestEvent.new_renewal_date ? toDay(new Date(latestEvent.new_renewal_date)) : null;
+
+    if (prevExpiry && renewedOn && renewedOn > prevExpiry) {
+      // done_delayed: negative days from deadline to done
+      return -daysBetween(prevExpiry, renewedOn);
+    }
+    // done on time: 0
+    return 0;
+  }
+
+  // ── currently overdue: live ticking ──
+  const status = computeStatus(renewal, latestEvent);
+  if (status === "overdue") {
+    const endDate = renewal.endDate ? toDay(new Date(renewal.endDate)) : null;
+    if (!endDate) return 0;
+    return -daysBetween(endDate, today);
+  }
+
+  // not_yet_due or due: 0
+  return 0;
+}
+
+// computeRenewerScore — sum of all item scores for a renewer
+export function computeRenewerScore(renewerName, renewals, latestEventMap) {
+  return renewals
+    .filter(r => r.renewerName === renewerName || r.responsible === renewerName)
+    .reduce((sum, r) => sum + computeItemScore(r, latestEventMap[r.id] ?? null), 0);
+}
+
 export function getStatus() { return "not_yet_due"; }
 
 // ── Status badge ──────────────────────────────────────────
@@ -122,6 +159,25 @@ function StatsCard({ label, value, sub, accent }) {
       <div style={{ fontSize: 13, fontWeight: 600, color: "#374151", marginTop: 6 }}>{label}</div>
       {sub && <div style={{ fontSize: 11, color: "#9CA3AF", marginTop: 3 }}>{sub}</div>}
     </div>
+  );
+}
+
+function ScoreBadge({ score }) {
+  const isZero = score === 0;
+  const bg     = isZero ? "#F3F4F6" : "#FEE2E2";
+  const color  = isZero ? "#6B7280" : "#991B1B";
+  const label  = isZero ? "0" : `${score}`;
+
+  return (
+    <span style={{
+      display: "inline-flex", alignItems: "center", gap: 4,
+      background: bg, color, padding: "2px 8px",
+      borderRadius: 10, fontSize: 11, fontWeight: 700,
+      whiteSpace: "nowrap"
+    }}>
+      {!isZero && <span style={{ fontSize: 10 }}>▼</span>}
+      {label}
+    </span>
   );
 }
 
@@ -1652,6 +1708,7 @@ export default function Dashboard({ categories = [], onNew, onEdit, onSelect, on
                       <TH>Service Start</TH>
                       <TH>Next Renewal Date</TH>
                       <TH>Status</TH>
+                      <TH>Score</TH>
                       <TH>Action</TH>
                     </>
                   ) : (
@@ -1702,7 +1759,8 @@ export default function Dashboard({ categories = [], onNew, onEdit, onSelect, on
                     {tab === "active" ? (
                       <>
                         <td style={{ padding: "13px 16px", fontSize: 13, color: "#374151" }}>
-                            {r.responsible}
+                            <div style={{ fontWeight: 600 }}>{r.responsible}</div>
+                            
                           </td>
 
                           {/* Service Start */}
@@ -1746,6 +1804,13 @@ export default function Dashboard({ categories = [], onNew, onEdit, onSelect, on
                             >
                               <StatusBadge status={status} />
                             </div>
+
+                            
+                            
+                          </td>
+
+                          <td style={{ padding: "13px 16px" }}>
+                            <ScoreBadge score={computeItemScore(r, latestEventMap[r.id] ?? null)} />
                           </td>
                         <td style={{ padding: "10px 12px" }}>
                             <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
@@ -1932,6 +1997,8 @@ export default function Dashboard({ categories = [], onNew, onEdit, onSelect, on
     </div>
   );
 }
+
+
 
 const inputStyle    = { flex: 1, minWidth: 200, border: "1.5px solid #E5E7EB", borderRadius: 8, padding: "8px 14px", fontSize: 14, outline: "none", color: "#111", fontFamily: "inherit" };
 const selectStyle   = { border: "1.5px solid #E5E7EB", borderRadius: 8, padding: "8px 14px", fontSize: 14, color: "#374151", cursor: "pointer", fontFamily: "inherit", background: "#fff", outline: "none" };
