@@ -3,6 +3,8 @@ const router     = express.Router();
 const RenewalEvent = require('../models/updaterenewal');
 const Newrenewal   = require('../models/Newrenewal');
 
+const sendRenewalUpdateCreatedMail = require('../utils/mailer/services/sendRenewalUpdateCreatedMail');
+
 // ── Helper: add months to a date ─────────────────────────
 const freqMonths = { Monthly: 1, Quarterly: 3, 'Half Yearly': 6, Annually: 12 };
 
@@ -10,6 +12,20 @@ function addMonths(date, n) {
   const d = new Date(date);
   d.setMonth(d.getMonth() + n);
   return d;
+}
+
+// ── Helper: recompute reminder dates from a given end_date ──
+function computeReminderDates(endDate, r1Days, r2Days, rFinalDays) {
+  const sub = (days) => {
+    const d = new Date(endDate);
+    d.setDate(d.getDate() - days);
+    return d;
+  };
+  return {
+    reminder1_date:      sub(r1Days     ?? 30),
+    reminder2_date:      sub(r2Days     ?? 10),
+    reminder_final_date: sub(rFinalDays ?? 1),
+  };
 }
 
 // ── Helper: next event_id preview (used by frontend) ─────
@@ -42,13 +58,9 @@ router.get('/next-id', async (req, res) => {
 // ────────────────────────────────────────────────────────
 // GET /api/renewal-events/items
 // Returns all active renewal items for the dropdown
-// Shape: [{ item_id, item_name, category, subcategory,
-//           start_date, frequency, user_person, user_department,
-//           renewer_name, emp_name }]
 // ────────────────────────────────────────────────────────
 router.get('/items', async (req, res) => {
   try {
-    // renewalEventRoutes.js — GET /items
     const items = await Newrenewal
       .find({ active: true, is_closed: { $ne: true } })
       .select(`
@@ -68,6 +80,7 @@ router.get('/items', async (req, res) => {
     res.status(500).json({ success: false, message: err.message });
   }
 });
+
 // ────────────────────────────────────────────────────────
 // POST /api/renewal-events
 // Record a new renewal event
@@ -83,7 +96,7 @@ router.post('/', async (req, res) => {
 
     // ── Previous dates — read directly from stored end_date ──
     const prevStartDate  = linkedItem.start_date || null;
-    const prevExpiryDate = linkedItem.end_date   || null;   // ← was being recalculated
+    const prevExpiryDate = linkedItem.end_date   || null;
 
     // ── New expiry — respect frequencyCount and "Other" ──────
     let newExpiryDate = null;
@@ -162,21 +175,34 @@ router.post('/', async (req, res) => {
 
     // ── Update linked Newrenewal on Renew ────────────────────
     if (b.renewal_required === 'Renew' && b.new_renewal_date && newExpiryDate) {
-        await Newrenewal.findOneAndUpdate(
-          { item_id: linkedItem.item_id },
-          {
-            $set: {
-              start_date:   new Date(b.new_renewal_date),
-              end_date:     newExpiryDate,
-              frequency:    b.frequency || linkedItem.frequency,
-              is_closed:    false,
-              // ── sync edited credentials back to the item ──
-              vendor:       b.vendor             || linkedItem.vendor       || '',
-              service_link: b.serviceLink        || linkedItem.service_link || '',
-              username:     b.credentialUsername || linkedItem.username     || '',
-              password:     b.credentialPassword || linkedItem.password     || '',
-            },
-            $push: {
+
+      const r1Days     = b.reminder1Days     ?? linkedItem.reminder1_days      ?? 30;
+      const r2Days     = b.reminder2Days     ?? linkedItem.reminder2_days      ?? 10;
+      const rFinalDays = b.reminderFinalDays ?? linkedItem.reminder_final_days ?? 1;
+
+      const reminderDates = computeReminderDates(newExpiryDate, r1Days, r2Days, rFinalDays);
+
+      const updatedRenewal = await Newrenewal.findOneAndUpdate(
+        { item_id: linkedItem.item_id },
+        {
+          $set: {
+            start_date:   new Date(b.new_renewal_date),
+            end_date:     newExpiryDate,
+            frequency:    b.frequency || linkedItem.frequency,
+            is_closed:    false,
+
+            // ── keep reminder config + recomputed dates in sync ──
+            reminder1_days:      r1Days,
+            reminder2_days:      r2Days,
+            reminder_final_days: rFinalDays,
+            ...reminderDates,
+
+            vendor:       b.vendor             || linkedItem.vendor       || '',
+            service_link: b.serviceLink        || linkedItem.service_link || '',
+            username:     b.credentialUsername || linkedItem.username     || '',
+            password:     b.credentialPassword || linkedItem.password     || '',
+          },
+          $push: {
             past_renewals: {
               event_id:     saved.event_id,
               renewal_date: new Date(b.new_renewal_date),
@@ -186,9 +212,17 @@ router.post('/', async (req, res) => {
               notes:        b.remarks || '',
             },
           },
-        }
-        );
+        },
+        { new: true }
+      ).lean();
+
+      // ── Notify on the renewal update, right when it happens ──
+      try {
+        await sendRenewalUpdateCreatedMail(updatedRenewal, saved);
+      } catch (mailErr) {
+        console.error('RENEWAL UPDATE MAIL ERROR:', mailErr);
       }
+    }
 
     // ── Mark as closed on Discontinue ───────────────────────
     if (b.renewal_required === 'Discontinue') {

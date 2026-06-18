@@ -2,7 +2,7 @@ const sendMail = require("../../sendMail");
 
 try {
   const ccList = [
-    // "management@briskolive.com",
+    "management@briskolive.com",
     "da.automation@briskolive.com",
     renewal.email,
   ]
