@@ -297,17 +297,11 @@ function DetailField({ label, value, mono, highlight }) {
 }
 
 function PasswordField({ label, value }) {
-  const [show, setShow] = useState(false);
   return (
     <div>
       <div style={{ fontSize: 11, color: "#9CA3AF", fontWeight: 600 }}>{label}</div>
-      <div style={{ fontSize: 13, color: "#111", fontWeight: 500, marginTop: 2, display: "flex", alignItems: "center", gap: 8 }}>
-        <span>{show ? (value || "—") : (value ? "••••••••" : "—")}</span>
-        {value && (
-          <button onClick={() => setShow(s => !s)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 12, color: "#6B7280", padding: 0 }}>
-            {show ? "🙈" : "👁️"}
-          </button>
-        )}
+      <div style={{ fontSize: 13, color: "#111", fontWeight: 500, marginTop: 2 }}>
+        {value ? "••••••••" : "—"}
       </div>
     </div>
   );
