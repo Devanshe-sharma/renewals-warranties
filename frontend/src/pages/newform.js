@@ -49,7 +49,6 @@ export default function NewForm({ onSave, onCancel, embedded = false }) {
   const [categories,   setCategories]   = useState([]);
   const [employees,    setEmployees]    = useState([]);
   const [nextItemId,   setNextItemId]   = useState("RW-0001");
-  const [showPassword, setShowPassword] = useState(false);
   const [ccSearch,     setCcSearch]     = useState("");
   const [ccOpen,       setCcOpen]       = useState(false);
   const [saving,       setSaving]       = useState(false); 
@@ -121,7 +120,12 @@ export default function NewForm({ onSave, onCancel, embedded = false }) {
   useEffect(() => {
     if (form.frequency && DEFAULT_REMIND[form.frequency]) {
       const d = DEFAULT_REMIND[form.frequency];
-      setForm(f => ({ ...f, reminder1Days: d.r1, reminder2Days: d.r2, reminderFinalDays: d.rf, frequencyCount: 1 }));
+      // For Monthly/Annually, frequencyCount stores actual months (e.g. 12 = 1 Year).
+      // Default to the first option (1 Month / 1 Year) instead of a bare "1".
+      const defaultCount = FREQ_COUNT_OPTIONS[form.frequency]
+        ? FREQ_COUNT_OPTIONS[form.frequency][0].value
+        : 1;
+      setForm(f => ({ ...f, reminder1Days: d.r1, reminder2Days: d.r2, reminderFinalDays: d.rf, frequencyCount: defaultCount }));
     }
   }, [form.frequency]);
 
@@ -311,22 +315,14 @@ export default function NewForm({ onSave, onCancel, embedded = false }) {
                 <input value={form.credentialUsername} onChange={e => set("credentialUsername", e.target.value)} style={inp("")} placeholder="admin@example.com" />
               </Field>
               <Field label="Password (confidential)">
-                <div style={{ position: "relative" }}>
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    value={form.credentialPassword}
-                    onChange={e => set("credentialPassword", e.target.value)}
-                    style={{ ...inp(""), paddingRight: 44 }}
-                    placeholder="••••••••"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(p => !p)}
-                    style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", fontSize: 14, color: "#6B7280" }}
-                  >
-                    {showPassword ? "🙈" : "👁️"}
-                  </button>
-                </div>
+                <input
+                  type="password"
+                  value={form.credentialPassword}
+                  onChange={e => set("credentialPassword", e.target.value)}
+                  style={inp("")}
+                  placeholder="••••••••"
+                  autoComplete="new-password"
+                />
               </Field>
             </div>
           </div>
@@ -657,4 +653,3 @@ const grid3 = { display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16 };
 
 const cancelBtnStyle = { padding: "11px 24px", borderRadius: 10, border: "1.5px solid #E5E7EB", background: "#fff", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" };
 const saveBtnStyle   = { padding: "11px 28px", borderRadius: 10, border: "none", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" };
-
