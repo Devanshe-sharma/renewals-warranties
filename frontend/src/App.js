@@ -22,6 +22,7 @@ import TicketsPage from "./pages/tickets/TicketsPage";
 import MyTicketsPage from "./pages/tickets/MyTicketsPage";
 import RaiseTicketForm from "./pages/tickets/RaiseTicketForm";
 import SsoCallback from "./pages/SsoCallback";
+import SsoLogout from "./pages/SsoLogout";
 import AuthGate from "./components/AuthGate";
 
 import { UserProvider } from "./context/UserContext";
@@ -34,13 +35,15 @@ function AppContent() {
 
   const [toast, setToast] = useState(null);
 
-  // /sso-callback must render outside AuthGate — it's what completes login,
-  // so gating it would loop: not authenticated -> redirect to HR-Forms ->
-  // redirect back to /sso-callback -> gated again.
-  if (location.pathname === "/sso-callback") {
+  // /sso-callback and /sso-logout must render outside AuthGate: the callback
+  // is what completes login (gating it would loop), and the logout page runs
+  // unattended inside a hidden iframe from HR-Forms, so it must never itself
+  // try to redirect anywhere.
+  if (location.pathname === "/sso-callback" || location.pathname === "/sso-logout") {
     return (
       <Routes>
         <Route path="/sso-callback" element={<SsoCallback />} />
+        <Route path="/sso-logout" element={<SsoLogout />} />
       </Routes>
     );
   }
