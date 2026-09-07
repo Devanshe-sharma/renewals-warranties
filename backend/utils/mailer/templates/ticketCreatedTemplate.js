@@ -43,6 +43,11 @@ module.exports = (ticket) => {
         </tr>
 
         <tr>
+          <td><b>Plan Date</b></td>
+          <td>${ticket.plan_date ? new Date(ticket.plan_date).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" }) : "-"}</td>
+        </tr>
+
+        <tr>
           <td><b>Attachment</b></td>
           <td>
             ${

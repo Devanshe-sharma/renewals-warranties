@@ -20,7 +20,6 @@ router.get("/", async (req, res) => {
 
     if (req.query.status) filter.status = req.query.status;
     if (req.query.priority) filter.priority = req.query.priority;
-    if (req.query.assignedTo) filter.assigned_to_emp_id = req.query.assignedTo;
 
     const tickets = await Ticket.find(filter).sort({ createdAt: -1 });
 
@@ -74,7 +73,7 @@ router.get("/:id", async (req, res) => {
 //
 router.post("/", async (req, res) => {
   try {
-    const { title, description, priority, attachment_link, attachment_file_url } = req.body;
+    const { title, description, priority, attachment_link, attachment_file_url, plan_date } = req.body;
 
     if (!title?.trim() || !description?.trim()) {
       return res.status(400).json({
@@ -89,6 +88,7 @@ router.post("/", async (req, res) => {
       priority,
       attachment_link: attachment_link || "",
       attachment_file_url: attachment_file_url || "",
+      plan_date: plan_date || null,
       raised_by_id: req.user.id,
       raised_by_name: req.user.name,
       raised_by_role: req.user.role,
@@ -126,7 +126,9 @@ router.post("/", async (req, res) => {
 });
 
 //
-// MANAGE TICKET (status / priority / assignee / plan date) — admin only
+// MANAGE TICKET (status / priority / done date) — admin only.
+// plan_date is intentionally NOT editable here — it's set once by the
+// raiser at creation and locked afterward.
 //
 router.put("/:id/manage", adminOnly, async (req, res) => {
   try {
@@ -139,14 +141,14 @@ router.put("/:id/manage", adminOnly, async (req, res) => {
       });
     }
 
-    const { status, priority, assigned_to_emp_id, assigned_to_name, plan_date } = req.body;
+    const { status, priority, done_date } = req.body;
 
     const changes = [];
 
     if (status && status !== ticket.status) {
       changes.push(`Status changed from "${ticket.status}" to "${status}"`);
       ticket.status = status;
-      ticket.resolved_at = ["Resolved", "Closed"].includes(status) ? new Date() : null;
+      ticket.done_date = ["Resolved", "Closed"].includes(status) ? (ticket.done_date || new Date()) : null;
     }
 
     if (priority && priority !== ticket.priority) {
@@ -154,14 +156,8 @@ router.put("/:id/manage", adminOnly, async (req, res) => {
       ticket.priority = priority;
     }
 
-    if (assigned_to_emp_id !== undefined && assigned_to_emp_id !== ticket.assigned_to_emp_id) {
-      changes.push(`Assigned to "${assigned_to_name || "Unassigned"}"`);
-      ticket.assigned_to_emp_id = assigned_to_emp_id || null;
-      ticket.assigned_to_name = assigned_to_name || null;
-    }
-
-    if (plan_date !== undefined) {
-      ticket.plan_date = plan_date || null;
+    if (done_date !== undefined) {
+      ticket.done_date = done_date || null;
     }
 
     if (changes.length) {

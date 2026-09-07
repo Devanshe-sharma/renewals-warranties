@@ -1,12 +1,11 @@
 import React, { useContext, useState } from "react";
-import Navbar from "../../components/navbar";
 import { UserContext } from "../../context/UserContext";
 
 const API = process.env.REACT_APP_API_URL || "http://localhost:3003";
 
 const PRIORITIES = ["Low", "Medium", "High", "Urgent"];
 
-const BLANK = { title: "", description: "", priority: "Medium", attachment_link: "" };
+const BLANK = { title: "", description: "", priority: "Medium", attachment_link: "", plan_date: "" };
 
 export default function RaiseTicketForm({ onSave, onCancel }) {
   const { token } = useContext(UserContext);
@@ -87,18 +86,11 @@ export default function RaiseTicketForm({ onSave, onCancel }) {
   };
 
   return (
-    <div style={{ paddingTop: 56 }}>
-      <Navbar
-        title="Raise Ticket"
-        subtitle="Submit a new support ticket"
-        breadcrumb={[
-          { label: "Tickets", onClick: onCancel },
-          { label: "Raise Ticket" },
-        ]}
-      />
+    <div style={{ padding: 28 }}>
+      <h2 style={titleStyle}>Raise Ticket</h2>
+      <p style={subtitleStyle}>Submit a new support ticket</p>
 
-      <div style={{ maxWidth: 700, margin: "0 auto", padding: 20 }}>
-        <div style={card}>
+      <div style={card}>
           <label style={labelStyle}>Title</label>
           <input
             type="text"
@@ -127,6 +119,15 @@ export default function RaiseTicketForm({ onSave, onCancel }) {
               <option key={p} value={p}>{p}</option>
             ))}
           </select>
+
+          <label style={labelStyle}>Plan Date (optional)</label>
+          <input
+            type="date"
+            value={form.plan_date}
+            onChange={(e) => set("plan_date", e.target.value)}
+            style={inputStyle}
+          />
+          <span style={hintStyle}>When you'd like this resolved by. Can't be changed once submitted.</span>
 
           <label style={labelStyle}>Attachment Link (optional)</label>
           <input
@@ -158,16 +159,24 @@ export default function RaiseTicketForm({ onSave, onCancel }) {
             </button>
           </div>
         </div>
-      </div>
     </div>
   );
 }
 
+const titleStyle = {
+  margin: 0,
+  fontSize: 20,
+  fontWeight: 700,
+  color: "#111827",
+};
+
+const subtitleStyle = {
+  margin: "4px 0 18px",
+  fontSize: 13,
+  color: "#6B7280",
+};
+
 const card = {
-  border: "1px solid #E5E7EB",
-  borderRadius: 12,
-  background: "#fff",
-  padding: 20,
   display: "flex",
   flexDirection: "column",
   gap: 6,

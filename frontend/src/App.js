@@ -20,7 +20,6 @@ import StatusRulesPage from "./pages/StatusRulesPage";
 
 import TicketsPage from "./pages/tickets/TicketsPage";
 import MyTicketsPage from "./pages/tickets/MyTicketsPage";
-import RaiseTicketForm from "./pages/tickets/RaiseTicketForm";
 import SsoCallback from "./pages/SsoCallback";
 import SsoLogout from "./pages/SsoLogout";
 import AuthGate from "./components/AuthGate";
@@ -176,42 +175,12 @@ function AppContent() {
 
           <Route
             path="/tickets"
-            element={
-              <TicketsPage
-                onRaiseTicket={() =>
-                  navigate("/tickets/new")
-                }
-              />
-            }
+            element={<TicketsPage />}
           />
 
           <Route
             path="/tickets/my"
-            element={
-              <MyTicketsPage
-                onRaiseTicket={() =>
-                  navigate("/tickets/new")
-                }
-              />
-            }
-          />
-
-          <Route
-            path="/tickets/new"
-            element={
-              <RaiseTicketForm
-                onSave={(ticket) => {
-                  showToast(
-                    `Ticket ${ticket.ticket_id} raised!`
-                  );
-
-                  navigate("/tickets");
-                }}
-                onCancel={() =>
-                  navigate("/tickets")
-                }
-              />
-            }
+            element={<MyTicketsPage />}
           />
         </Routes>
       </main>

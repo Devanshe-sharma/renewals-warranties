@@ -39,11 +39,15 @@ const TicketSchema = new mongoose.Schema(
     raised_by_name: { type: String, required: true },
     raised_by_role: { type: String, default: 'user' },
 
-    assigned_to_emp_id: { type: String, default: null },
-    assigned_to_name: { type: String, default: null },
+    // Every ticket goes to the Admin — there's only one handler, so this
+    // isn't a picker, just a fixed label.
+    assigned_to_name: { type: String, default: 'Admin' },
 
+    // Set once by the raiser on the raise-ticket form; not editable afterward.
     plan_date: { type: Date, default: null },
-    resolved_at: { type: Date, default: null },
+
+    // Set only by the admin via PUT /:id/manage — when it was actually done.
+    done_date: { type: Date, default: null },
 
     activity: { type: [activitySchema], default: [] },
   },
@@ -77,6 +81,5 @@ TicketSchema.index({ ticket_id: 1 });
 TicketSchema.index({ status: 1 });
 TicketSchema.index({ priority: 1 });
 TicketSchema.index({ raised_by_id: 1 });
-TicketSchema.index({ assigned_to_emp_id: 1 });
 
 module.exports = mongoose.model('Ticket', TicketSchema);
