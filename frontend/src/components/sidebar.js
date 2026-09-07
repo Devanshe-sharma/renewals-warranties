@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Drawer, List, ListItemButton, ListItemIcon, ListItemText,
   Box, Collapse, Avatar, Typography,
@@ -8,6 +8,9 @@ import {
   Edit as EditIcon,
   Category as CategoryIcon,
   Rule as RuleIcon,
+  ConfirmationNumber as ConfirmationNumberIcon,
+  ListAlt as ListAltIcon,
+  PersonOutlined as PersonOutlineIcon,
   ExpandLess as ExpandLessIcon,
   ExpandMore as ExpandMoreIcon,
 } from '@mui/icons-material';
@@ -18,6 +21,7 @@ const BRAND_BLUE = '#1976d2';
 
 export default function Sidebar() {
   const location = useLocation();
+  const [openGroups, setOpenGroups] = useState({ Tickets: true });
 
   const isActive = (path) => {
     return location.pathname === path || location.pathname.startsWith(path + '?');
@@ -27,6 +31,16 @@ export default function Sidebar() {
     { to: '/', text: 'Renewal Items Master', icon: <DashboardIcon /> },
     { to: '/updaterenewal', text: 'Renewals Records', icon: <EditIcon /> },
     { to: '/categories', text: 'Categories', icon: <CategoryIcon /> },
+    {
+      text: 'Tickets',
+      icon: <ConfirmationNumberIcon />,
+      open: !!openGroups.Tickets,
+      onClick: () => setOpenGroups((g) => ({ ...g, Tickets: !g.Tickets })),
+      subItems: [
+        { to: '/tickets', text: 'All Tickets', icon: <ListAltIcon /> },
+        { to: '/tickets/my', text: 'My Tickets', icon: <PersonOutlineIcon /> },
+      ],
+    },
     // { to: '/statusrules', text: 'Status Rules', icon: <RuleIcon /> },
   ];
 

@@ -4,6 +4,7 @@ import {
   Routes,
   Route,
   useNavigate,
+  useLocation,
 } from "react-router-dom";
 
 import Sidebar from "./components/sidebar";
@@ -17,14 +18,32 @@ import CategoriesPage from "./pages/categories";
 
 import StatusRulesPage from "./pages/StatusRulesPage";
 
+import TicketsPage from "./pages/tickets/TicketsPage";
+import MyTicketsPage from "./pages/tickets/MyTicketsPage";
+import RaiseTicketForm from "./pages/tickets/RaiseTicketForm";
+import SsoCallback from "./pages/SsoCallback";
+import AuthGate from "./components/AuthGate";
+
 import { UserProvider } from "./context/UserContext";
 
 import "./App.css";
 
 function AppContent() {
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [toast, setToast] = useState(null);
+
+  // /sso-callback must render outside AuthGate — it's what completes login,
+  // so gating it would loop: not authenticated -> redirect to HR-Forms ->
+  // redirect back to /sso-callback -> gated again.
+  if (location.pathname === "/sso-callback") {
+    return (
+      <Routes>
+        <Route path="/sso-callback" element={<SsoCallback />} />
+      </Routes>
+    );
+  }
 
   const showToast = (
     msg,
@@ -38,7 +57,7 @@ function AppContent() {
   };
 
   return (
-    <>
+    <AuthGate>
       <Sidebar />
 
       <main
@@ -151,6 +170,46 @@ function AppContent() {
               />
             }
           />
+
+          <Route
+            path="/tickets"
+            element={
+              <TicketsPage
+                onRaiseTicket={() =>
+                  navigate("/tickets/new")
+                }
+              />
+            }
+          />
+
+          <Route
+            path="/tickets/my"
+            element={
+              <MyTicketsPage
+                onRaiseTicket={() =>
+                  navigate("/tickets/new")
+                }
+              />
+            }
+          />
+
+          <Route
+            path="/tickets/new"
+            element={
+              <RaiseTicketForm
+                onSave={(ticket) => {
+                  showToast(
+                    `Ticket ${ticket.ticket_id} raised!`
+                  );
+
+                  navigate("/tickets");
+                }}
+                onCancel={() =>
+                  navigate("/tickets")
+                }
+              />
+            }
+          />
         </Routes>
       </main>
 
@@ -239,7 +298,7 @@ function AppContent() {
           }
         }
       `}</style>
-    </>
+    </AuthGate>
   );
 }
 

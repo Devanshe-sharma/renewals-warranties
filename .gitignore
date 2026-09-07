@@ -14,6 +14,8 @@ yarn-debug.log*
 
 # production
 
+# uploaded ticket attachments
+backend/uploads/
 
 
 # misc

@@ -2,40 +2,37 @@ import React, { createContext, useState, useCallback } from 'react';
 
 export const UserContext = createContext();
 
-export function UserProvider({ children }) {
-  const [user, setUser] = useState({
-    id: localStorage.getItem('userId') || 'user-' + Date.now(),
-    name: localStorage.getItem('userName') || 'Guest User',
-    role: localStorage.getItem('userRole') || 'user'
-  });
+function readStoredUser() {
+  try {
+    const raw = localStorage.getItem('authUser');
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
 
-  const updateUser = useCallback((newUser) => {
+export function UserProvider({ children }) {
+  const [user, setUser] = useState(readStoredUser());
+  const [token, setToken] = useState(localStorage.getItem('authToken') || null);
+
+  // Called by the /sso-callback page once it's exchanged HR-Forms's code
+  // for a local session — this is the only way to become logged in here.
+  const login = useCallback((newToken, newUser) => {
+    localStorage.setItem('authToken', newToken);
+    localStorage.setItem('authUser', JSON.stringify(newUser));
+    setToken(newToken);
     setUser(newUser);
-    localStorage.setItem('userId', newUser.id);
-    localStorage.setItem('userName', newUser.name);
-    localStorage.setItem('userRole', newUser.role);
   }, []);
 
-  const setAsAdmin = useCallback(() => {
-    const adminUser = {
-      id: 'admin-' + Date.now(),
-      name: 'Admin User',
-      role: 'admin'
-    };
-    updateUser(adminUser);
-  }, [updateUser]);
-
-  const setAsUser = useCallback(() => {
-    const regularUser = {
-      id: 'user-' + Date.now(),
-      name: 'Regular User',
-      role: 'user'
-    };
-    updateUser(regularUser);
-  }, [updateUser]);
+  const logout = useCallback(() => {
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('authUser');
+    setToken(null);
+    setUser(null);
+  }, []);
 
   return (
-    <UserContext.Provider value={{ user, updateUser, setAsAdmin, setAsUser }}>
+    <UserContext.Provider value={{ user, token, isAuthenticated: !!user && !!token, login, logout }}>
       {children}
     </UserContext.Provider>
   );
