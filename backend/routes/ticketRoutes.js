@@ -276,55 +276,6 @@ router.put("/:id/manage", ticketAdminOnly, async (req, res) => {
 });
 
 //
-// ADD COMMENT
-//
-router.post("/:id/comments", async (req, res) => {
-  try {
-    const ticket = await Ticket.findById(req.params.id);
-
-    if (!ticket) {
-      return res.status(404).json({
-        success: false,
-        message: "Ticket not found",
-      });
-    }
-
-    if (!isTicketAdmin(req) && ticket.raised_by_id !== req.user.id) {
-      return res.status(403).json({
-        success: false,
-        message: "You do not have access to this ticket",
-      });
-    }
-
-    if (!req.body.message?.trim()) {
-      return res.status(400).json({
-        success: false,
-        message: "Comment message is required",
-      });
-    }
-
-    ticket.activity.push({
-      author_id: req.user.id,
-      author_name: req.user.name,
-      action: "comment",
-      message: req.body.message.trim(),
-    });
-
-    await ticket.save();
-
-    res.json({
-      success: true,
-      data: ticket,
-    });
-  } catch (err) {
-    res.status(500).json({
-      success: false,
-      message: err.message,
-    });
-  }
-});
-
-//
 // DELETE TICKET — admin only
 //
 router.delete("/:id", ticketAdminOnly, async (req, res) => {

@@ -42,7 +42,6 @@ export default function TicketsPage({ mineOnly = false }) {
   const [tab, setTab] = useState("pending"); // "pending" | "done"
   const [selectedId, setSelectedId] = useState(null);
   const [raiseOpen, setRaiseOpen] = useState(false);
-  const [commentText, setCommentText] = useState("");
   const [loading, setLoading] = useState(false);
 
   const [closeTicketId, setCloseTicketId] = useState(null);
@@ -121,29 +120,6 @@ export default function TicketsPage({ mineOnly = false }) {
       console.error(err);
     } finally {
       setClosing(false);
-    }
-  };
-
-  const handleAddComment = async (ticketId) => {
-    if (!commentText.trim()) return;
-
-    try {
-      const res = await fetch(`${API}/api/tickets/${ticketId}/comments`, {
-        method: "POST",
-        headers: authHeaders,
-        body: JSON.stringify({ message: commentText.trim() }),
-      });
-
-      const data = await res.json();
-
-      if (data.success) {
-        setCommentText("");
-        fetchTickets();
-      } else {
-        alert(data.message);
-      }
-    } catch (err) {
-      console.error(err);
     }
   };
 
@@ -238,10 +214,6 @@ export default function TicketsPage({ mineOnly = false }) {
           <TicketDetail
             ticket={selectedTicket}
             isAdmin={isAdmin}
-            canComment={isAdmin || selectedTicket.raised_by_id === user.id}
-            commentText={commentText}
-            setCommentText={setCommentText}
-            onAddComment={() => handleAddComment(selectedTicket._id)}
             onCloseRequest={() => openCloseConfirm(selectedTicket)}
           />
         )}
@@ -284,7 +256,7 @@ export default function TicketsPage({ mineOnly = false }) {
   );
 }
 
-function TicketDetail({ ticket, isAdmin, canComment, commentText, setCommentText, onAddComment, onCloseRequest }) {
+function TicketDetail({ ticket, isAdmin, onCloseRequest }) {
   const isPending = PENDING_STATUSES.includes(ticket.status);
 
   return (
@@ -349,21 +321,6 @@ function TicketDetail({ ticket, isAdmin, canComment, commentText, setCommentText
             </div>
           ))}
         </div>
-
-        {canComment && (
-          <div style={{ display: "flex", gap: 10, marginTop: 12 }}>
-            <input
-              type="text"
-              placeholder="Add a comment..."
-              value={commentText}
-              onChange={(e) => setCommentText(e.target.value)}
-              style={{ ...inputStyle, flex: 1 }}
-            />
-            <button style={saveBtn} onClick={onAddComment}>
-              Post
-            </button>
-          </div>
-        )}
       </div>
     </div>
   );

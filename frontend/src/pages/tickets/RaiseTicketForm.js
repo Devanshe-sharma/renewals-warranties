@@ -158,53 +158,6 @@ export default function RaiseTicketForm({ onSave, onCancel }) {
             style={{ ...inputStyle, background: "#F3F4F6", color: "#6B7280" }}
           />
 
-          <label style={labelStyle}>Keep in CC (optional)</label>
-          {cc.length > 0 && (
-            <div style={ccChipsWrap}>
-              {cc.map((c) => (
-                <span key={c.email} style={ccChip}>
-                  {c.name || c.email}
-                  <button type="button" style={ccChipRemove} onClick={() => removeCc(c.email)}>×</button>
-                </span>
-              ))}
-            </div>
-          )}
-          <select
-            value=""
-            onChange={(e) => addCc(e.target.value)}
-            disabled={loadingEmployees || availableEmployees.length === 0}
-            style={inputStyle}
-          >
-            <option value="" disabled>
-              {loadingEmployees ? "Loading employees..." : "+ Add someone to CC"}
-            </option>
-            {availableEmployees.map((e) => (
-              <option key={e.email} value={e.email}>
-                {e.name}{e.designation ? ` — ${e.designation}` : ""}
-              </option>
-            ))}
-          </select>
-
-          {employeesError && (
-            <>
-              <span style={{ ...hintStyle, color: "#DC2626" }}>
-                {employeesError} — you can still add someone by email.
-              </span>
-              <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
-                <input
-                  type="text"
-                  placeholder="name@briskolive.com"
-                  value={manualCc}
-                  onChange={(e) => setManualCc(e.target.value)}
-                  style={{ ...inputStyle, flex: 1 }}
-                />
-                <button type="button" style={cancelBtn} onClick={addManualCc}>Add</button>
-              </div>
-            </>
-          )}
-
-          <span style={hintStyle}>They'll be CC'd on all emails for this ticket.</span>
-
           <label style={labelStyle}>Title</label>
           <input
             type="text"
@@ -261,6 +214,53 @@ export default function RaiseTicketForm({ onSave, onCancel }) {
               <button style={removeFileBtn} onClick={() => setFile(null)}>Remove</button>
             </span>
           )}
+
+          <label style={labelStyle}>Keep in CC (optional)</label>
+          {cc.length > 0 && (
+            <div style={ccChipsWrap}>
+              {cc.map((c) => (
+                <span key={c.email} style={ccChip}>
+                  {c.name || c.email}
+                  <button type="button" style={ccChipRemove} onClick={() => removeCc(c.email)}>×</button>
+                </span>
+              ))}
+            </div>
+          )}
+          <select
+            value=""
+            onChange={(e) => addCc(e.target.value)}
+            disabled={loadingEmployees || availableEmployees.length === 0}
+            style={inputStyle}
+          >
+            <option value="" disabled>
+              {loadingEmployees ? "Loading employees..." : "+ Add someone to CC"}
+            </option>
+            {availableEmployees.map((e) => (
+              <option key={e.email} value={e.email}>
+                {e.name}{e.designation ? ` — ${e.designation}` : ""}
+              </option>
+            ))}
+          </select>
+
+          {employeesError && (
+            <>
+              <span style={{ ...hintStyle, color: "#DC2626" }}>
+                {employeesError} — you can still add someone by email.
+              </span>
+              <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
+                <input
+                  type="text"
+                  placeholder="name@briskolive.com"
+                  value={manualCc}
+                  onChange={(e) => setManualCc(e.target.value)}
+                  style={{ ...inputStyle, flex: 1 }}
+                />
+                <button type="button" style={cancelBtn} onClick={addManualCc}>Add</button>
+              </div>
+            </>
+          )}
+
+          <span style={hintStyle}>They'll be CC'd on all emails for this ticket.</span>
 
           {error && <div style={errorStyle}>{error}</div>}
 
