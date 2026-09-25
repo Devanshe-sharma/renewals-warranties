@@ -166,7 +166,9 @@ export default function TicketsPage({ mineOnly = false }) {
                   <TH>Raised To</TH>
                   <TH>Description</TH>
                   <TH>Plan Date</TH>
+                  {!showAdminColumns && tab === "done" && <TH>Remarks</TH>}
                   {showAdminColumns && <TH>Action</TH>}
+                  <TH>View</TH>
                 </tr>
               </thead>
               <tbody>
@@ -184,6 +186,11 @@ export default function TicketsPage({ mineOnly = false }) {
                     <td style={cell} onClick={() => setSelectedId(ticket._id)}>
                       {ticket.plan_date ? new Date(ticket.plan_date).toLocaleDateString("en-IN") : "—"}
                     </td>
+                    {!showAdminColumns && tab === "done" && (
+                      <td style={{ ...cell, ...descCell }} onClick={() => setSelectedId(ticket._id)} title={ticket.remarks}>
+                        {ticket.remarks || "—"}
+                      </td>
+                    )}
                     {showAdminColumns && (
                       <td style={cell}>
                         {tab === "pending" ? (
@@ -195,6 +202,11 @@ export default function TicketsPage({ mineOnly = false }) {
                         )}
                       </td>
                     )}
+                    <td style={{ ...cell, cursor: "default" }}>
+                      <button style={viewBtn} onClick={() => setSelectedId(ticket._id)}>
+                        View
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -455,6 +467,17 @@ const closeBtn = {
   borderRadius: 6,
   background: "#DC2626",
   color: "#fff",
+  fontWeight: 600,
+  fontSize: 12,
+  cursor: "pointer",
+};
+
+const viewBtn = {
+  padding: "6px 14px",
+  border: "1px solid #D1D5DB",
+  borderRadius: 6,
+  background: "#fff",
+  color: "#374151",
   fontWeight: 600,
   fontSize: 12,
   cursor: "pointer",

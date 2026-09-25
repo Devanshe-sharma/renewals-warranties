@@ -172,6 +172,7 @@ router.post("/", async (req, res) => {
       cc: normalizeCc(cc),
       raised_by_id: req.user.id,
       raised_by_name: req.user.name,
+      raised_by_email: req.user.email,
       raised_by_role: req.user.role,
       activity: [
         {

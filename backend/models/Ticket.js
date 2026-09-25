@@ -37,6 +37,7 @@ const TicketSchema = new mongoose.Schema(
 
     raised_by_id: { type: String, required: true },
     raised_by_name: { type: String, required: true },
+    raised_by_email: { type: String, default: '' },
     raised_by_role: { type: String, default: 'user' },
 
     // Extra addresses the raiser wants looped in on this ticket's emails.
