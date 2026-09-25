@@ -1,8 +1,10 @@
-import React from "react";
-import { AppBar, Toolbar, Typography, Box } from '@mui/material';
+import React, { useContext, useState } from "react";
+import { AppBar, Toolbar, Typography, Box, IconButton, Avatar, Menu, MenuItem, Divider, ListItemIcon } from '@mui/material';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Brightness4Icon from '@mui/icons-material/Brightness4';
 import Brightness7Icon from '@mui/icons-material/Brightness7';
+import LogoutIcon from '@mui/icons-material/Logout';
+import { UserContext } from '../context/UserContext';
 
 const drawerWidth = 200;
 
@@ -75,13 +77,72 @@ export default function Navbar({ title, subtitle, breadcrumb = [], actions }) {
           </Box>
 
           {/* Right side actions */}
-          {actions && (
-            <Box sx={{ display: "flex", gap: 2, alignItems: "center" }}>
-              {actions}
-            </Box>
-          )}
+          <Box sx={{ display: "flex", gap: 2, alignItems: "center" }}>
+            {actions}
+            <ProfileMenu />
+          </Box>
         </Toolbar>
       </AppBar>
+    </>
+  );
+}
+
+function getInitials(name) {
+  if (!name) return '?';
+  return name.trim().split(/\s+/).map(part => part[0]).slice(0, 2).join('').toUpperCase();
+}
+
+function ProfileMenu() {
+  const { user, logout } = useContext(UserContext);
+  const [anchorEl, setAnchorEl] = useState(null);
+
+  if (!user) return null;
+
+  const handleLogout = () => {
+    setAnchorEl(null);
+    logout();
+  };
+
+  return (
+    <>
+      <IconButton onClick={(e) => setAnchorEl(e.currentTarget)} size="small">
+        <Avatar
+          sx={{
+            width: 36,
+            height: 36,
+            bgcolor: 'rgba(255,255,255,0.25)',
+            color: '#fff',
+            fontSize: 14,
+            fontWeight: 700,
+          }}
+        >
+          {getInitials(user.name)}
+        </Avatar>
+      </IconButton>
+      <Menu
+        anchorEl={anchorEl}
+        open={Boolean(anchorEl)}
+        onClose={() => setAnchorEl(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+        slotProps={{ paper: { sx: { mt: 1, minWidth: 220, borderRadius: 2 } } }}
+      >
+        <Box sx={{ px: 2, py: 1.5 }}>
+          <Typography variant="subtitle2" fontWeight={700} noWrap>
+            {user.name}
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ wordBreak: 'break-all' }}>
+            {user.email}
+          </Typography>
+        </Box>
+        <Divider />
+        <MenuItem onClick={handleLogout} sx={{ color: '#991B1B' }}>
+          <ListItemIcon sx={{ color: '#991B1B', minWidth: 32 }}>
+            <LogoutIcon fontSize="small" />
+          </ListItemIcon>
+          Logout
+        </MenuItem>
+      </Menu>
     </>
   );
 }

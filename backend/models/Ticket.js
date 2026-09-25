@@ -39,6 +39,9 @@ const TicketSchema = new mongoose.Schema(
     raised_by_name: { type: String, required: true },
     raised_by_role: { type: String, default: 'user' },
 
+    // Extra addresses the raiser wants looped in on this ticket's emails.
+    cc: { type: [String], default: [] },
+
     // Every ticket goes to the Admin — there's only one handler, so this
     // isn't a picker, just a fixed label.
     assigned_to_name: { type: String, default: 'Admin' },
@@ -48,6 +51,10 @@ const TicketSchema = new mongoose.Schema(
 
     // Set only by the admin via PUT /:id/manage — when it was actually done.
     done_date: { type: Date, default: null },
+
+    // The admin's note left when closing the ticket — shown to the raiser
+    // only inside the ticket detail popup, never in the table.
+    remarks: { type: String, default: '' },
 
     activity: { type: [activitySchema], default: [] },
   },

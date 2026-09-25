@@ -5,7 +5,7 @@ const API = process.env.REACT_APP_API_URL || "http://localhost:3003";
 
 const PRIORITIES = ["Low", "Medium", "High", "Urgent"];
 
-const BLANK = { title: "", description: "", priority: "Medium", attachment_link: "", plan_date: "" };
+const BLANK = { title: "", description: "", priority: "Medium", attachment_link: "", plan_date: "", cc: "" };
 
 export default function RaiseTicketForm({ onSave, onCancel }) {
   const { token } = useContext(UserContext);
@@ -91,6 +91,24 @@ export default function RaiseTicketForm({ onSave, onCancel }) {
       <p style={subtitleStyle}>Submit a new support ticket</p>
 
       <div style={card}>
+          <label style={labelStyle}>Raised To</label>
+          <input
+            type="text"
+            value="Admin (admin@briskolive.com)"
+            disabled
+            style={{ ...inputStyle, background: "#F3F4F6", color: "#6B7280" }}
+          />
+
+          <label style={labelStyle}>Keep in CC (optional)</label>
+          <input
+            type="text"
+            placeholder="e.g. manager@briskolive.com, teammate@briskolive.com"
+            value={form.cc}
+            onChange={(e) => set("cc", e.target.value)}
+            style={inputStyle}
+          />
+          <span style={hintStyle}>Comma-separate multiple addresses. They'll be CC'd on all emails for this ticket.</span>
+
           <label style={labelStyle}>Title</label>
           <input
             type="text"

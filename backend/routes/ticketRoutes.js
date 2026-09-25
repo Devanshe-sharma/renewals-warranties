@@ -2,10 +2,34 @@ const express = require("express");
 const router = express.Router();
 
 const Ticket = require("../models/Ticket");
-const { adminOnly } = require("../middleware/auth");
 
 const sendTicketCreatedMail = require("../utils/mailer/services/sendTicketCreatedMail");
 const sendTicketStatusUpdateMail = require("../utils/mailer/services/sendTicketStatusUpdateMail");
+
+// Ticket management is restricted to this one address specifically — not
+// whoever HR-Forms happens to report as 'Admin' for the day. Deliberately
+// separate from the generic role-based adminOnly in middleware/auth.js.
+const TICKET_ADMIN_EMAIL = "admin@briskolive.com";
+const isTicketAdmin = (req) => req.user.email === TICKET_ADMIN_EMAIL;
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+// Accepts either an array or a comma-separated string from the form,
+// trims, drops anything that isn't a valid-looking address, and dedupes.
+function normalizeCc(cc) {
+  const list = Array.isArray(cc) ? cc : String(cc || "").split(",");
+  return [...new Set(list.map((e) => e.trim()).filter((e) => EMAIL_RE.test(e)))];
+}
+
+const ticketAdminOnly = (req, res, next) => {
+  if (!isTicketAdmin(req)) {
+    return res.status(403).json({
+      success: false,
+      message: "Only the ticket admin can perform this action",
+    });
+  }
+  next();
+};
 
 //
 // GET ALL (own tickets for a user, all tickets for admin)
@@ -14,7 +38,7 @@ router.get("/", async (req, res) => {
   try {
     const filter = {};
 
-    if (req.user.role !== "admin" || req.query.mine === "true") {
+    if (!isTicketAdmin(req) || req.query.mine === "true") {
       filter.raised_by_id = req.user.id;
     }
 
@@ -49,7 +73,7 @@ router.get("/:id", async (req, res) => {
       });
     }
 
-    if (req.user.role !== "admin" && ticket.raised_by_id !== req.user.id) {
+    if (!isTicketAdmin(req) && ticket.raised_by_id !== req.user.id) {
       return res.status(403).json({
         success: false,
         message: "You do not have access to this ticket",
@@ -73,7 +97,7 @@ router.get("/:id", async (req, res) => {
 //
 router.post("/", async (req, res) => {
   try {
-    const { title, description, priority, attachment_link, attachment_file_url, plan_date } = req.body;
+    const { title, description, priority, attachment_link, attachment_file_url, plan_date, cc } = req.body;
 
     if (!title?.trim() || !description?.trim()) {
       return res.status(400).json({
@@ -89,6 +113,7 @@ router.post("/", async (req, res) => {
       attachment_link: attachment_link || "",
       attachment_file_url: attachment_file_url || "",
       plan_date: plan_date || null,
+      cc: normalizeCc(cc),
       raised_by_id: req.user.id,
       raised_by_name: req.user.name,
       raised_by_role: req.user.role,
@@ -130,7 +155,7 @@ router.post("/", async (req, res) => {
 // plan_date is intentionally NOT editable here — it's set once by the
 // raiser at creation and locked afterward.
 //
-router.put("/:id/manage", adminOnly, async (req, res) => {
+router.put("/:id/manage", ticketAdminOnly, async (req, res) => {
   try {
     const ticket = await Ticket.findById(req.params.id);
 
@@ -141,7 +166,7 @@ router.put("/:id/manage", adminOnly, async (req, res) => {
       });
     }
 
-    const { status, priority, done_date } = req.body;
+    const { status, priority, done_date, remarks } = req.body;
 
     const changes = [];
 
@@ -158,6 +183,11 @@ router.put("/:id/manage", adminOnly, async (req, res) => {
 
     if (done_date !== undefined) {
       ticket.done_date = done_date || null;
+    }
+
+    if (remarks !== undefined && remarks !== ticket.remarks) {
+      ticket.remarks = remarks;
+      if (remarks) changes.push(`Remarks: "${remarks}"`);
     }
 
     if (changes.length) {
@@ -203,7 +233,7 @@ router.post("/:id/comments", async (req, res) => {
       });
     }
 
-    if (req.user.role !== "admin" && ticket.raised_by_id !== req.user.id) {
+    if (!isTicketAdmin(req) && ticket.raised_by_id !== req.user.id) {
       return res.status(403).json({
         success: false,
         message: "You do not have access to this ticket",
@@ -241,7 +271,7 @@ router.post("/:id/comments", async (req, res) => {
 //
 // DELETE TICKET — admin only
 //
-router.delete("/:id", adminOnly, async (req, res) => {
+router.delete("/:id", ticketAdminOnly, async (req, res) => {
   try {
     await Ticket.findByIdAndDelete(req.params.id);
 

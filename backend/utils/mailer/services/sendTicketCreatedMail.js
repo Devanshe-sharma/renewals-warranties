@@ -1,16 +1,16 @@
 const sendMail = require("../../sendMail");
 
-const ticketCreatedTemplate = require("../templates/ticketCreatedTemplate");
+const MAIL = require("../constants/mailRecipients");
 
-// TEMP: ticket mails route only to this address for now (per request) —
-// switch back to MAIL.ADMIN (../constants/mailRecipients) once ready.
-const TICKET_MAIL_TO = "software.developer@briskolive.com";
+const ticketCreatedTemplate = require("../templates/ticketCreatedTemplate");
 
 module.exports = async (ticket) => {
 
   return await sendMail({
 
-    to: TICKET_MAIL_TO,
+    to: MAIL.ADMIN.join(","),
+
+    cc: ticket.cc || [],
 
     subject: `New Ticket Raised - ${ticket.ticket_id}: ${ticket.title}`,
 

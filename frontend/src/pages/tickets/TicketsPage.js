@@ -6,10 +6,12 @@ import { UserContext } from "../../context/UserContext";
 
 const API = process.env.REACT_APP_API_URL || "http://localhost:3003";
 
-const STATUSES = ["Open", "In Progress", "Resolved", "Closed"];
-const PRIORITIES = ["Low", "Medium", "High", "Urgent"];
-const PENDING_STATUSES = ["Open", "In Progress"];
-const SOLVED_STATUSES = ["Resolved", "Closed"];
+const PRIORITY_COLORS = {
+  Low: { bg: "#E5E7EB", color: "#374151" },
+  Medium: { bg: "#DBEAFE", color: "#1E40AF" },
+  High: { bg: "#FFEDD5", color: "#9A3412" },
+  Urgent: { bg: "#FEE2E2", color: "#DC2626" },
+};
 
 const STATUS_COLORS = {
   Open: { bg: "#DBEAFE", color: "#1E40AF" },
@@ -18,27 +20,28 @@ const STATUS_COLORS = {
   Closed: { bg: "#E5E7EB", color: "#374151" },
 };
 
-const PRIORITY_COLORS = {
-  Low: { bg: "#E5E7EB", color: "#374151" },
-  Medium: { bg: "#DBEAFE", color: "#1E40AF" },
-  High: { bg: "#FFEDD5", color: "#9A3412" },
-  Urgent: { bg: "#FEE2E2", color: "#DC2626" },
-};
+const PENDING_STATUSES = ["Open", "In Progress"];
+const DONE_STATUSES = ["Resolved", "Closed"];
+
+// Ticket management is restricted to this one address — not just anyone
+// HR-Forms happens to report as 'Admin'.
+const TICKET_ADMIN_EMAIL = "admin@briskolive.com";
 
 export default function TicketsPage({ mineOnly = false }) {
   const { user, token } = useContext(UserContext);
-  const isAdmin = user.role === "admin";
+  const isAdmin = user.email === TICKET_ADMIN_EMAIL;
+  const showAdminColumns = isAdmin && !mineOnly;
 
   const [tickets, setTickets] = useState([]);
+  const [tab, setTab] = useState("pending"); // "pending" | "done"
   const [selectedId, setSelectedId] = useState(null);
   const [raiseOpen, setRaiseOpen] = useState(false);
-  const [statusGroup, setStatusGroup] = useState(""); // "", "pending", "solved"
-  const [priorityFilter, setPriorityFilter] = useState("");
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
-  const [drafts, setDrafts] = useState({});
   const [commentText, setCommentText] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const [closeTicketId, setCloseTicketId] = useState(null);
+  const [closeRemarks, setCloseRemarks] = useState("");
+  const [closing, setClosing] = useState(false);
 
   const authHeaders = {
     "Content-Type": "application/json",
@@ -55,15 +58,6 @@ export default function TicketsPage({ mineOnly = false }) {
 
       if (data.success) {
         setTickets(data.data);
-        const nextDrafts = {};
-        data.data.forEach((t) => {
-          nextDrafts[t._id] = {
-            status: t.status,
-            priority: t.priority,
-            done_date: t.done_date ? t.done_date.split("T")[0] : "",
-          };
-        });
-        setDrafts(nextDrafts);
       }
     } catch (err) {
       console.error("Fetch tickets error:", err);
@@ -78,63 +72,49 @@ export default function TicketsPage({ mineOnly = false }) {
   }, []);
 
   const counts = useMemo(() => ({
-    total: tickets.length,
     pending: tickets.filter((t) => PENDING_STATUSES.includes(t.status)).length,
-    solved: tickets.filter((t) => SOLVED_STATUSES.includes(t.status)).length,
+    done: tickets.filter((t) => DONE_STATUSES.includes(t.status)).length,
   }), [tickets]);
 
   const filteredTickets = useMemo(() => {
-    return tickets.filter((t) => {
-      if (statusGroup === "pending" && !PENDING_STATUSES.includes(t.status)) return false;
-      if (statusGroup === "solved" && !SOLVED_STATUSES.includes(t.status)) return false;
-      if (priorityFilter && t.priority !== priorityFilter) return false;
-      if (dateFrom && new Date(t.createdAt) < new Date(dateFrom)) return false;
-      if (dateTo) {
-        const to = new Date(dateTo);
-        to.setHours(23, 59, 59, 999);
-        if (new Date(t.createdAt) > to) return false;
-      }
-      return true;
-    });
-  }, [tickets, statusGroup, priorityFilter, dateFrom, dateTo]);
+    const statuses = tab === "pending" ? PENDING_STATUSES : DONE_STATUSES;
+    return tickets
+      .filter((t) => statuses.includes(t.status))
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  }, [tickets, tab]);
 
   const selectedTicket = tickets.find((t) => t._id === selectedId) || null;
+  const closeTicket = tickets.find((t) => t._id === closeTicketId) || null;
 
-  const hasFilters = statusGroup || priorityFilter || dateFrom || dateTo;
-  const clearFilters = () => {
-    setStatusGroup("");
-    setPriorityFilter("");
-    setDateFrom("");
-    setDateTo("");
+  const openCloseConfirm = (ticket) => {
+    setSelectedId(null);
+    setCloseRemarks("");
+    setCloseTicketId(ticket._id);
   };
 
-  const setDraft = (ticketId, key, value) => {
-    setDrafts((d) => ({ ...d, [ticketId]: { ...d[ticketId], [key]: value } }));
-  };
-
-  const handleManageSave = async (ticket) => {
-    const draft = drafts[ticket._id];
+  const handleConfirmClose = async () => {
+    if (!closeTicket) return;
+    setClosing(true);
 
     try {
-      const res = await fetch(`${API}/api/tickets/${ticket._id}/manage`, {
+      const res = await fetch(`${API}/api/tickets/${closeTicket._id}/manage`, {
         method: "PUT",
         headers: authHeaders,
-        body: JSON.stringify({
-          status: draft.status,
-          priority: draft.priority,
-          done_date: draft.done_date || null,
-        }),
+        body: JSON.stringify({ status: "Closed", remarks: closeRemarks.trim() }),
       });
 
       const data = await res.json();
 
       if (data.success) {
+        setCloseTicketId(null);
         fetchTickets();
       } else {
         alert(data.message);
       }
     } catch (err) {
       console.error(err);
+    } finally {
+      setClosing(false);
     }
   };
 
@@ -176,51 +156,20 @@ export default function TicketsPage({ mineOnly = false }) {
           </button>
         </div>
 
-        {/* ── Filter cards ── */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 14, marginBottom: 16 }}>
-          <StatCard
-            label="Total"
-            value={counts.total}
-            accent="#1976d2"
-            active={statusGroup === ""}
-            onClick={() => setStatusGroup("")}
-          />
-          <StatCard
-            label="Pending"
-            value={counts.pending}
-            accent="#F59E0B"
-            active={statusGroup === "pending"}
-            onClick={() => setStatusGroup(statusGroup === "pending" ? "" : "pending")}
-          />
-          <StatCard
-            label="Solved"
-            value={counts.solved}
-            accent="#10B981"
-            active={statusGroup === "solved"}
-            onClick={() => setStatusGroup(statusGroup === "solved" ? "" : "solved")}
-          />
-        </div>
-
-        {/* ── Filters ── */}
-        <div style={filterBar}>
-          <div>
-            <label style={labelStyle}>From</label>
-            <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} style={inputStyle} />
-          </div>
-          <div>
-            <label style={labelStyle}>To</label>
-            <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} style={inputStyle} />
-          </div>
-          <div>
-            <label style={labelStyle}>Priority</label>
-            <select value={priorityFilter} onChange={(e) => setPriorityFilter(e.target.value)} style={filterSelectStyle}>
-              <option value="">All Priorities</option>
-              {PRIORITIES.map((p) => <option key={p} value={p}>{p}</option>)}
-            </select>
-          </div>
-          {hasFilters && (
-            <button style={clearBtn} onClick={clearFilters}>Clear Filters</button>
-          )}
+        {/* ── Tabs ── */}
+        <div style={tabBar}>
+          <button
+            style={tab === "pending" ? tabBtnActive : tabBtn}
+            onClick={() => setTab("pending")}
+          >
+            Pending ({counts.pending})
+          </button>
+          <button
+            style={tab === "done" ? tabBtnActive : tabBtn}
+            onClick={() => setTab("done")}
+          >
+            Done ({counts.done})
+          </button>
         </div>
 
         {loading && <div style={{ color: "#6B7280", marginBottom: 10 }}>Loading...</div>}
@@ -231,33 +180,39 @@ export default function TicketsPage({ mineOnly = false }) {
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
                 <tr style={{ background: "#F9FAFB" }}>
-                  <TH />
-                  <TH>Ticket ID</TH>
-                  <TH>Title</TH>
-                  {!mineOnly && <TH>Raised By</TH>}
-                  <TH>Priority</TH>
-                  <TH>Status</TH>
-                  <TH>Raised On</TH>
+                  <TH>Timestamp</TH>
+                  <TH>Raised To</TH>
+                  <TH>Description</TH>
+                  <TH>Plan Date</TH>
+                  {showAdminColumns && <TH>Action</TH>}
                 </tr>
               </thead>
               <tbody>
                 {filteredTickets.map((ticket) => (
-                  <tr
-                    key={ticket._id}
-                    onClick={() => setSelectedId(ticket._id)}
-                    style={row}
-                  >
-                    <td style={{ ...cell, width: 24 }}>▶</td>
-                    <td style={{ ...cell, fontWeight: 700, color: "#1976d2" }}>{ticket.ticket_id}</td>
-                    <td style={cell}>{ticket.title}</td>
-                    {!mineOnly && <td style={cell}>{ticket.raised_by_name}</td>}
-                    <td style={cell}>
-                      <span style={{ ...badge, ...(PRIORITY_COLORS[ticket.priority] || {}) }}>{ticket.priority}</span>
+                  <tr key={ticket._id} style={row}>
+                    <td style={cell} onClick={() => setSelectedId(ticket._id)}>
+                      {new Date(ticket.createdAt).toLocaleString("en-IN")}
                     </td>
-                    <td style={cell}>
-                      <span style={{ ...badge, ...(STATUS_COLORS[ticket.status] || {}) }}>{ticket.status}</span>
+                    <td style={cell} onClick={() => setSelectedId(ticket._id)}>
+                      {ticket.assigned_to_name || "Admin"}
                     </td>
-                    <td style={cell}>{new Date(ticket.createdAt).toLocaleDateString("en-IN")}</td>
+                    <td style={{ ...cell, ...descCell }} onClick={() => setSelectedId(ticket._id)} title={ticket.description}>
+                      {ticket.description}
+                    </td>
+                    <td style={cell} onClick={() => setSelectedId(ticket._id)}>
+                      {ticket.plan_date ? new Date(ticket.plan_date).toLocaleDateString("en-IN") : "—"}
+                    </td>
+                    {showAdminColumns && (
+                      <td style={cell}>
+                        {tab === "pending" ? (
+                          <button style={closeBtn} onClick={() => openCloseConfirm(ticket)}>
+                            Close?
+                          </button>
+                        ) : (
+                          <span style={{ ...badge, ...(STATUS_COLORS.Closed) }}>Closed</span>
+                        )}
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
@@ -276,14 +231,12 @@ export default function TicketsPage({ mineOnly = false }) {
         {selectedTicket && (
           <TicketDetail
             ticket={selectedTicket}
-            draft={drafts[selectedTicket._id] || {}}
             isAdmin={isAdmin}
             canComment={isAdmin || selectedTicket.raised_by_id === user.id}
             commentText={commentText}
             setCommentText={setCommentText}
-            setDraft={setDraft}
-            onSaveManage={() => handleManageSave(selectedTicket)}
             onAddComment={() => handleAddComment(selectedTicket._id)}
+            onCloseRequest={() => openCloseConfirm(selectedTicket)}
           />
         )}
       </Modal>
@@ -294,11 +247,40 @@ export default function TicketsPage({ mineOnly = false }) {
           onCancel={() => setRaiseOpen(false)}
         />
       </Modal>
+
+      <Modal open={!!closeTicket} onClose={() => setCloseTicketId(null)} maxWidth={420}>
+        {closeTicket && (
+          <div style={{ padding: 24 }}>
+            <h3 style={{ margin: "0 0 4px" }}>Close ticket {closeTicket.ticket_id}?</h3>
+            <p style={{ margin: "0 0 14px", color: "#6B7280", fontSize: 13 }}>{closeTicket.title}</p>
+
+            <label style={labelStyle}>Remarks (optional)</label>
+            <textarea
+              value={closeRemarks}
+              onChange={(e) => setCloseRemarks(e.target.value)}
+              rows={3}
+              placeholder="Add a note for the person who raised this..."
+              style={{ ...inputStyle, resize: "vertical" }}
+            />
+
+            <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
+              <button style={saveBtn} onClick={handleConfirmClose} disabled={closing}>
+                {closing ? "Closing..." : "Yes, close"}
+              </button>
+              <button style={cancelBtn} onClick={() => setCloseTicketId(null)} disabled={closing}>
+                No, cancel
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }
 
-function TicketDetail({ ticket, draft, isAdmin, canComment, commentText, setCommentText, setDraft, onSaveManage, onAddComment }) {
+function TicketDetail({ ticket, isAdmin, canComment, commentText, setCommentText, onAddComment, onCloseRequest }) {
+  const isPending = PENDING_STATUSES.includes(ticket.status);
+
   return (
     <div style={body}>
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
@@ -311,7 +293,10 @@ function TicketDetail({ ticket, draft, isAdmin, canComment, commentText, setComm
 
       <div style={metaRow}>
         <span><b>Raised By:</b> {ticket.raised_by_name}</span>
-        <span><b>Assigned To:</b> {ticket.assigned_to_name || "Unassigned"}</span>
+        <span><b>Raised To:</b> {ticket.assigned_to_name || "Admin"}</span>
+        {ticket.cc?.length > 0 && (
+          <span><b>CC:</b> {ticket.cc.join(", ")}</span>
+        )}
         {ticket.plan_date && (
           <span><b>Plan Date:</b> {new Date(ticket.plan_date).toLocaleDateString("en-IN")}</span>
         )}
@@ -332,42 +317,16 @@ function TicketDetail({ ticket, draft, isAdmin, canComment, commentText, setComm
         )}
       </div>
 
-      {isAdmin && (
-        <div style={manageRow}>
-          <div>
-            <label style={labelStyle}>Status</label>
-            <select
-              value={draft.status || ""}
-              onChange={(e) => setDraft(ticket._id, "status", e.target.value)}
-              style={inputStyle}
-            >
-              {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
-            </select>
-          </div>
+      {ticket.remarks && (
+        <div style={remarksBox}>
+          <b>Doer Remarks:</b> {ticket.remarks}
+        </div>
+      )}
 
-          <div>
-            <label style={labelStyle}>Priority</label>
-            <select
-              value={draft.priority || ""}
-              onChange={(e) => setDraft(ticket._id, "priority", e.target.value)}
-              style={inputStyle}
-            >
-              {PRIORITIES.map((p) => <option key={p} value={p}>{p}</option>)}
-            </select>
-          </div>
-
-          <div>
-            <label style={labelStyle}>Done Date</label>
-            <input
-              type="date"
-              value={draft.done_date || ""}
-              onChange={(e) => setDraft(ticket._id, "done_date", e.target.value)}
-              style={inputStyle}
-            />
-          </div>
-
-          <button style={saveBtn} onClick={onSaveManage}>
-            Save
+      {isAdmin && isPending && (
+        <div style={{ marginBottom: 16 }}>
+          <button style={closeBtn} onClick={onCloseRequest}>
+            Close this ticket
           </button>
         </div>
       )}
@@ -404,27 +363,6 @@ function TicketDetail({ ticket, draft, isAdmin, canComment, commentText, setComm
   );
 }
 
-function StatCard({ label, value, accent, active, onClick }) {
-  return (
-    <div
-      onClick={onClick}
-      style={{
-        background: active ? `${accent}14` : "#fff",
-        borderRadius: 12,
-        padding: "16px 20px",
-        boxShadow: "0 1px 4px rgba(0,0,0,0.07)",
-        borderLeft: `3px solid ${accent}`,
-        outline: active ? `1.5px solid ${accent}` : "none",
-        cursor: "pointer",
-        userSelect: "none",
-      }}
-    >
-      <div style={{ fontSize: 20, fontWeight: 800, color: "#111", lineHeight: 1 }}>{value}</div>
-      <div style={{ fontSize: 13, fontWeight: 600, color: "#374151", marginTop: 6 }}>{label}</div>
-    </div>
-  );
-}
-
 function TH({ children }) {
   return (
     <th style={{ padding: "11px 16px", fontSize: 11, fontWeight: 700, color: "#6B7280", textAlign: "left", letterSpacing: 0.6, textTransform: "uppercase", borderBottom: "1px solid #F3F4F6", whiteSpace: "nowrap" }}>
@@ -441,7 +379,6 @@ const tableWrap = {
 };
 
 const row = {
-  cursor: "pointer",
   borderBottom: "1px solid #F3F4F6",
 };
 
@@ -449,6 +386,14 @@ const cell = {
   padding: "13px 16px",
   fontSize: 13,
   color: "#374151",
+  cursor: "pointer",
+};
+
+const descCell = {
+  maxWidth: 320,
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
 };
 
 const body = {
@@ -478,27 +423,38 @@ const metaRow = {
   marginBottom: 12,
 };
 
-const manageRow = {
-  display: "flex",
-  gap: 14,
-  alignItems: "flex-end",
-  flexWrap: "wrap",
-  padding: 12,
-  background: "#F9FAFB",
+const remarksBox = {
+  fontSize: 13,
+  color: "#374151",
+  background: "#FFFBEB",
+  border: "1px solid #FDE68A",
   borderRadius: 8,
-  marginBottom: 4,
+  padding: "10px 12px",
+  marginBottom: 16,
 };
 
-const filterBar = {
-  background: "#fff",
-  borderRadius: 12,
-  padding: "14px 18px",
-  boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
-  marginBottom: 16,
+const tabBar = {
   display: "flex",
-  gap: 16,
-  alignItems: "flex-end",
-  flexWrap: "wrap",
+  gap: 10,
+  marginBottom: 16,
+};
+
+const tabBtn = {
+  padding: "10px 20px",
+  borderRadius: 8,
+  border: "1px solid #E5E7EB",
+  background: "#fff",
+  color: "#374151",
+  fontWeight: 600,
+  fontSize: 13,
+  cursor: "pointer",
+};
+
+const tabBtnActive = {
+  ...tabBtn,
+  border: "1px solid #1976d2",
+  background: "#1976d214",
+  color: "#1976d2",
 };
 
 const labelStyle = {
@@ -516,11 +472,8 @@ const inputStyle = {
   fontSize: 13,
   outline: "none",
   fontFamily: "inherit",
-};
-
-const filterSelectStyle = {
-  ...inputStyle,
-  minWidth: 160,
+  width: "100%",
+  boxSizing: "border-box",
 };
 
 const addBtn = {
@@ -533,15 +486,15 @@ const addBtn = {
   cursor: "pointer",
 };
 
-const clearBtn = {
-  padding: "8px 16px",
-  border: "1px solid #E5E7EB",
+const closeBtn = {
+  padding: "6px 14px",
+  border: "none",
   borderRadius: 6,
-  background: "#fff",
-  color: "#374151",
+  background: "#DC2626",
+  color: "#fff",
   fontWeight: 600,
+  fontSize: 12,
   cursor: "pointer",
-  height: 34,
 };
 
 const saveBtn = {
@@ -550,6 +503,17 @@ const saveBtn = {
   borderRadius: 6,
   background: "#1976d2",
   color: "#fff",
+  fontWeight: 600,
+  cursor: "pointer",
+  height: 34,
+};
+
+const cancelBtn = {
+  padding: "8px 16px",
+  border: "1px solid #E5E7EB",
+  borderRadius: 6,
+  background: "#fff",
+  color: "#374151",
   fontWeight: 600,
   cursor: "pointer",
   height: 34,
