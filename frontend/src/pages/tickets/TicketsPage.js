@@ -167,6 +167,7 @@ export default function TicketsPage({ mineOnly = false }) {
                   <TH>Description</TH>
                   <TH>Plan Date</TH>
                   {!showAdminColumns && tab === "done" && <TH>Remarks</TH>}
+                  {showAdminColumns && <TH>Raised By</TH>}
                   {showAdminColumns && <TH>Action</TH>}
                   <TH>View</TH>
                 </tr>
@@ -189,6 +190,11 @@ export default function TicketsPage({ mineOnly = false }) {
                     {!showAdminColumns && tab === "done" && (
                       <td style={{ ...cell, ...descCell }} onClick={() => setSelectedId(ticket._id)} title={ticket.remarks}>
                         {ticket.remarks || "—"}
+                      </td>
+                    )}
+                    {showAdminColumns && (
+                      <td style={cell} onClick={() => setSelectedId(ticket._id)}>
+                        {ticket.raised_by_name}
                       </td>
                     )}
                     {showAdminColumns && (
