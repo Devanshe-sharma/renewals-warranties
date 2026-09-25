@@ -7,10 +7,13 @@ const { authMiddleware } = require('../middleware/auth');
 const asyncHandler = fn => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
 
 // HR-Forms owns credentials/roles for everyone at the company (Admin, HR,
-// Management, ...). This app only has two levels — map anything HR-Forms
-// calls "Admin" to local admin, everyone else to local user.
+// Management, ...). This app keeps three levels — Admin and Management pass
+// through as-is (both get full ticket visibility, see ticketRoutes.js),
+// everything else collapses to local user.
 function mapHrRoleToLocal(hrRole) {
-  return hrRole === 'Admin' ? 'admin' : 'user';
+  if (hrRole === 'Admin') return 'admin';
+  if (hrRole === 'Management') return 'management';
+  return 'user';
 }
 
 function signToken(user) {

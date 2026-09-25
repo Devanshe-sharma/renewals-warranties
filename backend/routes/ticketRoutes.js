@@ -6,11 +6,20 @@ const Ticket = require("../models/Ticket");
 const sendTicketCreatedMail = require("../utils/mailer/services/sendTicketCreatedMail");
 const sendTicketStatusUpdateMail = require("../utils/mailer/services/sendTicketStatusUpdateMail");
 
-// Ticket management is restricted to this one address specifically — not
-// whoever HR-Forms happens to report as 'Admin' for the day. Deliberately
-// separate from the generic role-based adminOnly in middleware/auth.js.
+// Full ticket access (see every ticket, close/delete any ticket) — not just
+// whoever HR-Forms happens to report as 'Admin' for the day:
+//  - the fixed ticket-handling mailbox
+//  - the portal admin (dev owner of this app)
+//  - anyone HR-Forms reports as Admin or Management
+// Everyone else only ever sees their own raised tickets.
 const TICKET_ADMIN_EMAIL = "admin@briskolive.com";
-const isTicketAdmin = (req) => req.user.email === TICKET_ADMIN_EMAIL;
+const PORTAL_ADMIN_EMAIL = "software.developer@briskolive.com";
+const FULL_ACCESS_ROLES = ["admin", "management"];
+
+const isTicketAdmin = (req) =>
+  req.user.email === TICKET_ADMIN_EMAIL ||
+  req.user.email === PORTAL_ADMIN_EMAIL ||
+  FULL_ACCESS_ROLES.includes(req.user.role);
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -30,6 +39,53 @@ const ticketAdminOnly = (req, res, next) => {
   }
   next();
 };
+
+// ── Employee picker for "Keep in CC" ────────────────────────────────────
+// Proxies HR-Forms's onboarding records so the raise-ticket form can offer
+// a dropdown instead of free-typed addresses. Deliberately strips
+// everything except name/email/designation/dept — the onboarding record
+// also carries PAN, bank details, Aadhaar, etc. that this app has no
+// business holding onto or exposing to the frontend. Cached briefly since
+// it's ~140 full records fetched on every raise-ticket form open otherwise.
+let employeeCache = { data: null, fetchedAt: 0 };
+const EMPLOYEE_CACHE_TTL_MS = 5 * 60 * 1000;
+
+router.get("/employees", async (req, res) => {
+  try {
+    const now = Date.now();
+    if (employeeCache.data && now - employeeCache.fetchedAt < EMPLOYEE_CACHE_TTL_MS) {
+      return res.json({ success: true, data: employeeCache.data });
+    }
+
+    const hrRes = await fetch(process.env.HR_ONBOARDING_URL);
+    if (!hrRes.ok) {
+      throw new Error(`HR-Forms responded with ${hrRes.status}`);
+    }
+    const { data: records = [] } = await hrRes.json();
+
+    const seen = new Set();
+    const employees = records
+      .filter((r) => r.joiningStatus === "Joined")
+      .map((r) => ({
+        name: (r.name || "").trim(),
+        email: String(r.officialEmail || "").trim().toLowerCase(),
+        designation: r.designation || "",
+        dept: r.dept || "",
+      }))
+      .filter((e) => e.name && EMAIL_RE.test(e.email))
+      .filter((e) => (seen.has(e.email) ? false : (seen.add(e.email), true)))
+      .sort((a, b) => a.name.localeCompare(b.name));
+
+    employeeCache = { data: employees, fetchedAt: now };
+
+    res.json({ success: true, data: employees });
+  } catch (err) {
+    res.status(502).json({
+      success: false,
+      message: "Could not load employee list from HR-Forms",
+    });
+  }
+});
 
 //
 // GET ALL (own tickets for a user, all tickets for admin)

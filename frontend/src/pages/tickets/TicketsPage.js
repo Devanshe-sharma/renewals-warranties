@@ -23,13 +23,19 @@ const STATUS_COLORS = {
 const PENDING_STATUSES = ["Open", "In Progress"];
 const DONE_STATUSES = ["Resolved", "Closed"];
 
-// Ticket management is restricted to this one address — not just anyone
-// HR-Forms happens to report as 'Admin'.
+// Full ticket access — the fixed ticket mailbox, the portal admin, and
+// anyone HR-Forms reports as Admin or Management. Must match isTicketAdmin
+// in backend/routes/ticketRoutes.js.
 const TICKET_ADMIN_EMAIL = "admin@briskolive.com";
+const PORTAL_ADMIN_EMAIL = "software.developer@briskolive.com";
+const FULL_ACCESS_ROLES = ["admin", "management"];
 
 export default function TicketsPage({ mineOnly = false }) {
   const { user, token } = useContext(UserContext);
-  const isAdmin = user.email === TICKET_ADMIN_EMAIL;
+  const isAdmin =
+    user.email === TICKET_ADMIN_EMAIL ||
+    user.email === PORTAL_ADMIN_EMAIL ||
+    FULL_ACCESS_ROLES.includes(user.role);
   const showAdminColumns = isAdmin && !mineOnly;
 
   const [tickets, setTickets] = useState([]);
