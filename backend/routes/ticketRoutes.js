@@ -23,6 +23,18 @@ const isTicketAdmin = (req) =>
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+// Earliest plan_date allowed per priority — Critical can be planned for
+// today, Medium needs 2+ days out, Low needs 4+ days out. Enforced here
+// (not just via the form's <input min>, which a client can bypass).
+const MIN_PLAN_DAYS_BY_PRIORITY = { Critical: 0, Medium: 2, Low: 4 };
+
+function minPlanDate(priority) {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() + (MIN_PLAN_DAYS_BY_PRIORITY[priority] ?? 0));
+  return d;
+}
+
 // Accepts either an array or a comma-separated string from the form,
 // trims, drops anything that isn't a valid-looking address, and dedupes.
 function normalizeCc(cc) {
@@ -160,6 +172,16 @@ router.post("/", async (req, res) => {
         success: false,
         message: "Title and description are required",
       });
+    }
+
+    if (plan_date) {
+      const min = minPlanDate(priority);
+      if (new Date(plan_date) < min) {
+        return res.status(400).json({
+          success: false,
+          message: `For ${priority || "this"} priority, the plan date can't be earlier than ${min.toLocaleDateString("en-IN")}`,
+        });
+      }
     }
 
     const ticket = await Ticket.create({

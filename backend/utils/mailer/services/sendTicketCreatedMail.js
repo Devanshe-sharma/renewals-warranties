@@ -11,11 +11,18 @@ const EXCLUDE_EMAIL = "software.developer@briskolive.com";
 
 module.exports = async (ticket) => {
 
+  // Critical tickets loop Management in automatically — this is a silent
+  // side effect, never surfaced on the raise-ticket form itself.
+  const cc = [
+    ...(ticket.cc || []),
+    ...(ticket.priority === "Critical" ? MAIL.MANAGEMENT : []),
+  ].filter((e) => e.toLowerCase() !== EXCLUDE_EMAIL);
+
   return await sendMail({
 
     to: MAIL.ADMIN.join(","),
 
-    cc: (ticket.cc || []).filter((e) => e.toLowerCase() !== EXCLUDE_EMAIL),
+    cc,
 
     subject: `New Ticket Raised - ${ticket.ticket_id}: ${ticket.title}`,
 

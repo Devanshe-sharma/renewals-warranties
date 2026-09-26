@@ -1571,7 +1571,7 @@ export default function Dashboard({ categories = [], onNew, onEdit, onSelect, on
 
   const matchesEmployee =
     employeeF === "all" ||
-    r.empName === employeeF;
+    r.renewerName === employeeF;
 
   return (
     matchesSearch &&
@@ -1667,17 +1667,17 @@ export default function Dashboard({ categories = [], onNew, onEdit, onSelect, on
                 onChange={(e) => setEmployeeF(e.target.value)}
                 style={selectStyle}
               >
-                <option value="all">All Users</option>
+                <option value="all">All Renewers</option>
 
                 {[...new Set(
                   [...renewals, ...archived]
-                    .map(r => r.empName)
+                    .map(r => r.renewerName)
                     .filter(Boolean)
                 )]
                   .sort()
-                  .map(employee => (
-                    <option key={employee} value={employee}>
-                      {employee}
+                  .map(renewer => (
+                    <option key={renewer} value={renewer}>
+                      {renewer}
                     </option>
                   ))}
               </select>

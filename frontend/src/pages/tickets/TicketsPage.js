@@ -9,8 +9,7 @@ const API = process.env.REACT_APP_API_URL || "http://localhost:3003";
 const PRIORITY_COLORS = {
   Low: { bg: "#E5E7EB", color: "#374151" },
   Medium: { bg: "#DBEAFE", color: "#1E40AF" },
-  High: { bg: "#FFEDD5", color: "#9A3412" },
-  Urgent: { bg: "#FEE2E2", color: "#DC2626" },
+  Critical: { bg: "#FEE2E2", color: "#DC2626" },
 };
 
 const STATUS_COLORS = {
@@ -163,6 +162,7 @@ export default function TicketsPage({ mineOnly = false }) {
               <thead>
                 <tr style={{ background: "#F9FAFB" }}>
                   <TH>Timestamp</TH>
+                  <TH>Priority</TH>
                   <TH>Raised To</TH>
                   <TH>Description</TH>
                   <TH>Plan Date</TH>
@@ -177,6 +177,9 @@ export default function TicketsPage({ mineOnly = false }) {
                   <tr key={ticket._id} style={row}>
                     <td style={cell} onClick={() => setSelectedId(ticket._id)}>
                       {new Date(ticket.createdAt).toLocaleString("en-IN")}
+                    </td>
+                    <td style={cell} onClick={() => setSelectedId(ticket._id)}>
+                      <span style={{ ...badge, ...(PRIORITY_COLORS[ticket.priority] || {}) }}>{ticket.priority}</span>
                     </td>
                     <td style={cell} onClick={() => setSelectedId(ticket._id)}>
                       {ticket.assigned_to_name || "Admin"}

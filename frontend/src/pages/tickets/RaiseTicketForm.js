@@ -3,7 +3,21 @@ import { UserContext } from "../../context/UserContext";
 
 const API = process.env.REACT_APP_API_URL || "http://localhost:3003";
 
-const PRIORITIES = ["Low", "Medium", "High", "Urgent"];
+const PRIORITIES = ["Low", "Medium", "Critical"];
+
+// Earliest plan_date selectable per priority — Critical can be planned for
+// today, Medium needs 2+ days out, Low needs 4+ days out. Mirrored
+// server-side in backend/routes/ticketRoutes.js since <input min> alone
+// can't be trusted.
+const MIN_PLAN_DAYS_BY_PRIORITY = { Critical: 0, Medium: 2, Low: 4 };
+
+const toISODate = (d) => d.toISOString().split("T")[0];
+
+const minPlanDate = (priority) => {
+  const d = new Date();
+  d.setDate(d.getDate() + (MIN_PLAN_DAYS_BY_PRIORITY[priority] ?? 0));
+  return toISODate(d);
+};
 
 const BLANK = { title: "", description: "", priority: "Medium", attachment_link: "", plan_date: "" };
 
@@ -22,6 +36,16 @@ export default function RaiseTicketForm({ onSave, onCancel }) {
   const [manualCc, setManualCc] = useState("");
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
+
+  const setPriority = (priority) => {
+    setForm((f) => {
+      const min = minPlanDate(priority);
+      // Bump an already-picked date up if it's no longer early enough
+      // for the new priority, rather than silently submitting anyway.
+      const plan_date = f.plan_date && f.plan_date < min ? min : f.plan_date;
+      return { ...f, priority, plan_date };
+    });
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -113,6 +137,11 @@ export default function RaiseTicketForm({ onSave, onCancel }) {
       return;
     }
 
+    if (form.plan_date && form.plan_date < minPlanDate(form.priority)) {
+      setError(`For ${form.priority} priority, the plan date can't be earlier than ${minPlanDate(form.priority)}`);
+      return;
+    }
+
     setSaving(true);
     setError("");
 
@@ -179,7 +208,7 @@ export default function RaiseTicketForm({ onSave, onCancel }) {
           <label style={labelStyle}>Priority</label>
           <select
             value={form.priority}
-            onChange={(e) => set("priority", e.target.value)}
+            onChange={(e) => setPriority(e.target.value)}
             style={inputStyle}
           >
             {PRIORITIES.map((p) => (
@@ -191,10 +220,16 @@ export default function RaiseTicketForm({ onSave, onCancel }) {
           <input
             type="date"
             value={form.plan_date}
+            min={minPlanDate(form.priority)}
             onChange={(e) => set("plan_date", e.target.value)}
             style={inputStyle}
           />
-          <span style={hintStyle}>When you'd like this resolved by. Can't be changed once submitted.</span>
+          <span style={hintStyle}>
+            {form.priority === "Critical"
+              ? "Critical tickets can be planned for today."
+              : `${form.priority} priority needs at least ${MIN_PLAN_DAYS_BY_PRIORITY[form.priority]} days' notice.`}
+            {" "}Can't be changed once submitted.
+          </span>
 
           <label style={labelStyle}>Attachment Link (optional)</label>
           <input
