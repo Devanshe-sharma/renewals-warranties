@@ -23,8 +23,10 @@ import MyTicketsPage from "./pages/tickets/MyTicketsPage";
 import SsoCallback from "./pages/SsoCallback";
 import SsoLogout from "./pages/SsoLogout";
 import AuthGate from "./components/AuthGate";
+import RequireAccess from "./components/RequireAccess";
 
 import { UserProvider } from "./context/UserContext";
+import { canAccessRenewals } from "./utils/access";
 
 import "./App.css";
 
@@ -74,86 +76,96 @@ function AppContent() {
           <Route
             path="/"
             element={
-              <Dashboard
-                onNew={() =>
-                  navigate("/new")
-                }
-                onNavigateUpdateForm={() =>
-                  navigate(
-                    "/updaterenewal"
-                  )
-                }
-              />
+              <RequireAccess check={canAccessRenewals}>
+                <Dashboard
+                  onNew={() =>
+                    navigate("/new")
+                  }
+                  onNavigateUpdateForm={() =>
+                    navigate(
+                      "/updaterenewal"
+                    )
+                  }
+                />
+              </RequireAccess>
             }
           />
 
           <Route
             path="/renewals"
             element={
-              <Dashboard
-                onNew={() =>
-                  navigate("/new")
-                }
-                onNavigateUpdateForm={() =>
-                  navigate("/updaterenewal")
-                }
-              />
+              <RequireAccess check={canAccessRenewals}>
+                <Dashboard
+                  onNew={() =>
+                    navigate("/new")
+                  }
+                  onNavigateUpdateForm={() =>
+                    navigate("/updaterenewal")
+                  }
+                />
+              </RequireAccess>
             }
           />
 
           <Route
             path="/new"
             element={
-              <NewForm
-                onSave={(data) => {
-                  showToast(
-                    `"${data.item_name}" created!`
-                  );
+              <RequireAccess check={canAccessRenewals}>
+                <NewForm
+                  onSave={(data) => {
+                    showToast(
+                      `"${data.item_name}" created!`
+                    );
 
-                  navigate("/");
-                }}
-                onCancel={() =>
-                  navigate("/")
-                }
-              />
+                    navigate("/");
+                  }}
+                  onCancel={() =>
+                    navigate("/")
+                  }
+                />
+              </RequireAccess>
             }
           />
 
           <Route
             path="/updaterenewal"
             element={
-              <RenewalEventsPage
-                onRecord={() =>
-                  navigate(
-                    "/updaterenewal/record"
-                  )
-                }
-                onBack={() =>
-                  navigate("/")
-                }
-              />
+              <RequireAccess check={canAccessRenewals}>
+                <RenewalEventsPage
+                  onRecord={() =>
+                    navigate(
+                      "/updaterenewal/record"
+                    )
+                  }
+                  onBack={() =>
+                    navigate("/")
+                  }
+                />
+              </RequireAccess>
             }
           />
 
           <Route
             path="/updaterenewal/record"
             element={
-              <UpdateForm
-                onSave={(data) => {
-                  showToast(
-                    `Event ${data.event_id} recorded!`
-                  );
+              <RequireAccess check={canAccessRenewals}>
+                <UpdateForm
+                  onSave={(data) => {
+                    showToast(
+                      `Event ${data.event_id} recorded!`
+                    );
 
-                  navigate(
-                    "/updaterenewal"
-                  );
-                }}
-                onCancel={() =>
-                  navigate(
-                    "/updaterenewal"
-                  )
-                }
-              />
+                    navigate(
+                      "/updaterenewal"
+                    );
+                  }}
+                  onCancel={() =>
+                    navigate(
+                      "/updaterenewal"
+                    )
+                  }
+                />
+              </RequireAccess>
             }
           />
 

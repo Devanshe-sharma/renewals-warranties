@@ -12,7 +12,7 @@ const authMiddleware = (req, res, next) => {
 
   try {
     const payload = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = { id: payload.id, name: payload.name, role: payload.role, email: payload.email };
+    req.user = { id: payload.id, name: payload.name, role: payload.role, email: payload.email, department: payload.department };
     next();
   } catch {
     return res.status(401).json({ error: 'Invalid or expired session' });

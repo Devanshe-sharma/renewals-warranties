@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useContext, useState } from 'react';
 import {
   Drawer, List, ListItemButton, ListItemIcon, ListItemText,
   Box, Collapse, Avatar, Typography,
@@ -15,12 +15,15 @@ import {
   ExpandMore as ExpandMoreIcon,
 } from '@mui/icons-material';
 import { useLocation, Link } from 'react-router-dom';
+import { UserContext } from '../context/UserContext';
+import { canAccessRenewals } from '../utils/access';
 
 const drawerWidth = 200;
 const BRAND_BLUE = '#1976d2';
 
 export default function Sidebar() {
   const location = useLocation();
+  const { user } = useContext(UserContext);
   const [openGroups, setOpenGroups] = useState({ Tickets: true });
 
   const isActive = (path) => {
@@ -28,8 +31,12 @@ export default function Sidebar() {
   };
 
   const menuItems = [
-    { to: '/', text: 'Renewal Items Master', icon: <DashboardIcon /> },
-    { to: '/updaterenewal', text: 'Renewals Records', icon: <EditIcon /> },
+    ...(canAccessRenewals(user)
+      ? [
+          { to: '/', text: 'Renewal Items Master', icon: <DashboardIcon /> },
+          { to: '/updaterenewal', text: 'Renewals Records', icon: <EditIcon /> },
+        ]
+      : []),
     { to: '/categories', text: 'Categories', icon: <CategoryIcon /> },
     {
       text: 'Tickets',
