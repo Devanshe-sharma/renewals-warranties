@@ -16,7 +16,7 @@ import {
 } from '@mui/icons-material';
 import { useLocation, Link } from 'react-router-dom';
 import { UserContext } from '../context/UserContext';
-import { canAccessRenewals } from '../utils/access';
+import { canAccessRenewalsArea } from '../utils/access';
 
 const drawerWidth = 200;
 const BRAND_BLUE = '#1976d2';
@@ -31,13 +31,13 @@ export default function Sidebar() {
   };
 
   const menuItems = [
-    ...(canAccessRenewals(user)
+    ...(canAccessRenewalsArea(user)
       ? [
           { to: '/', text: 'Renewal Items Master', icon: <DashboardIcon /> },
           { to: '/updaterenewal', text: 'Renewals Records', icon: <EditIcon /> },
+          { to: '/categories', text: 'Categories', icon: <CategoryIcon /> },
         ]
       : []),
-    { to: '/categories', text: 'Categories', icon: <CategoryIcon /> },
     {
       text: 'Tickets',
       icon: <ConfirmationNumberIcon />,

@@ -26,7 +26,7 @@ import AuthGate from "./components/AuthGate";
 import RequireAccess from "./components/RequireAccess";
 
 import { UserProvider } from "./context/UserContext";
-import { canAccessRenewals } from "./utils/access";
+import { canAccessRenewalsArea } from "./utils/access";
 
 import "./App.css";
 
@@ -76,7 +76,7 @@ function AppContent() {
           <Route
             path="/"
             element={
-              <RequireAccess check={canAccessRenewals}>
+              <RequireAccess check={canAccessRenewalsArea}>
                 <Dashboard
                   onNew={() =>
                     navigate("/new")
@@ -94,7 +94,7 @@ function AppContent() {
           <Route
             path="/renewals"
             element={
-              <RequireAccess check={canAccessRenewals}>
+              <RequireAccess check={canAccessRenewalsArea}>
                 <Dashboard
                   onNew={() =>
                     navigate("/new")
@@ -110,7 +110,7 @@ function AppContent() {
           <Route
             path="/new"
             element={
-              <RequireAccess check={canAccessRenewals}>
+              <RequireAccess check={canAccessRenewalsArea}>
                 <NewForm
                   onSave={(data) => {
                     showToast(
@@ -130,7 +130,7 @@ function AppContent() {
           <Route
             path="/updaterenewal"
             element={
-              <RequireAccess check={canAccessRenewals}>
+              <RequireAccess check={canAccessRenewalsArea}>
                 <RenewalEventsPage
                   onRecord={() =>
                     navigate(
@@ -148,7 +148,7 @@ function AppContent() {
           <Route
             path="/updaterenewal/record"
             element={
-              <RequireAccess check={canAccessRenewals}>
+              <RequireAccess check={canAccessRenewalsArea}>
                 <UpdateForm
                   onSave={(data) => {
                     showToast(
@@ -171,7 +171,11 @@ function AppContent() {
 
           <Route
             path="/categories"
-            element={<CategoriesPage />}
+            element={
+              <RequireAccess check={canAccessRenewalsArea}>
+                <CategoriesPage />
+              </RequireAccess>
+            }
           />
 
           <Route
