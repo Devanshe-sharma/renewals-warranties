@@ -2,6 +2,7 @@ import React, { useContext, useEffect, useMemo, useState } from "react";
 import Navbar from "../../components/navbar";
 import Modal from "../../components/Modal";
 import RaiseTicketForm from "./RaiseTicketForm";
+import CcPicker from "./CcPicker";
 import { UserContext } from "../../context/UserContext";
 
 const API = process.env.REACT_APP_API_URL || "http://localhost:3003";
@@ -45,6 +46,7 @@ export default function TicketsPage({ mineOnly = false }) {
 
   const [closeTicketId, setCloseTicketId] = useState(null);
   const [closeRemarks, setCloseRemarks] = useState("");
+  const [closeCc, setCloseCc] = useState([]);
   const [closing, setClosing] = useState(false);
 
   const authHeaders = {
@@ -93,6 +95,7 @@ export default function TicketsPage({ mineOnly = false }) {
   const openCloseConfirm = (ticket) => {
     setSelectedId(null);
     setCloseRemarks("");
+    setCloseCc([]);
     setCloseTicketId(ticket._id);
   };
 
@@ -104,7 +107,11 @@ export default function TicketsPage({ mineOnly = false }) {
       const res = await fetch(`${API}/api/tickets/${closeTicket._id}/manage`, {
         method: "PUT",
         headers: authHeaders,
-        body: JSON.stringify({ status: "Closed", remarks: closeRemarks.trim() }),
+        body: JSON.stringify({
+          status: "Closed",
+          remarks: closeRemarks.trim(),
+          cc: closeCc.map((c) => c.email),
+        }),
       });
 
       const data = await res.json();
@@ -247,7 +254,7 @@ export default function TicketsPage({ mineOnly = false }) {
         />
       </Modal>
 
-      <Modal open={!!closeTicket} onClose={() => setCloseTicketId(null)} maxWidth={420}>
+      <Modal open={!!closeTicket} onClose={() => setCloseTicketId(null)} maxWidth={520}>
         {closeTicket && (
           <div style={{ padding: 24 }}>
             <h3 style={{ margin: "0 0 4px" }}>Close ticket {closeTicket.ticket_id}?</h3>
@@ -260,6 +267,13 @@ export default function TicketsPage({ mineOnly = false }) {
               rows={3}
               placeholder="Add a note for the person who raised this..."
               style={{ ...inputStyle, resize: "vertical" }}
+            />
+
+            <CcPicker
+              value={closeCc}
+              onChange={setCloseCc}
+              label="Add CC on closing (optional)"
+              hint="They'll be CC'd on the closing email, and kept in CC for this ticket going forward."
             />
 
             <div style={{ display: "flex", gap: 10, marginTop: 16 }}>

@@ -1,5 +1,6 @@
-import React, { useContext, useEffect, useState } from "react";
+import React, { useContext, useState } from "react";
 import { UserContext } from "../../context/UserContext";
+import CcPicker from "./CcPicker";
 
 const API = process.env.REACT_APP_API_URL || "http://localhost:3003";
 
@@ -29,11 +30,7 @@ export default function RaiseTicketForm({ onSave, onCancel }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
-  const [employees, setEmployees] = useState([]);
-  const [loadingEmployees, setLoadingEmployees] = useState(true);
-  const [employeesError, setEmployeesError] = useState("");
   const [cc, setCc] = useState([]);
-  const [manualCc, setManualCc] = useState("");
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
@@ -45,58 +42,6 @@ export default function RaiseTicketForm({ onSave, onCancel }) {
       const plan_date = f.plan_date && f.plan_date < min ? min : f.plan_date;
       return { ...f, priority, plan_date };
     });
-  };
-
-  useEffect(() => {
-    let cancelled = false;
-
-    fetch(`${API}/api/tickets/employees`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        if (cancelled) return;
-        if (data.success) {
-          setEmployees(data.data);
-        } else {
-          setEmployeesError(data.message || "Could not load employee list");
-        }
-      })
-      .catch(() => {
-        if (!cancelled) setEmployeesError("Could not load employee list");
-      })
-      .finally(() => {
-        if (!cancelled) setLoadingEmployees(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [token]);
-
-  const availableEmployees = employees.filter(
-    (e) => !cc.some((c) => c.email === e.email)
-  );
-
-  const addCc = (email) => {
-    const emp = employees.find((e) => e.email === email);
-    if (!emp) return;
-    setCc((list) => (list.some((c) => c.email === emp.email) ? list : [...list, emp]));
-  };
-
-  const removeCc = (email) => {
-    setCc((list) => list.filter((c) => c.email !== email));
-  };
-
-  const addManualCc = () => {
-    const email = manualCc.trim().toLowerCase();
-    if (!email) return;
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      setError("Enter a valid CC email address");
-      return;
-    }
-    setCc((list) => (list.some((c) => c.email === email) ? list : [...list, { name: email, email }]));
-    setManualCc("");
   };
 
   const handleFileChange = async (e) => {
@@ -250,52 +195,7 @@ export default function RaiseTicketForm({ onSave, onCancel }) {
             </span>
           )}
 
-          <label style={labelStyle}>Keep in CC (optional)</label>
-          {cc.length > 0 && (
-            <div style={ccChipsWrap}>
-              {cc.map((c) => (
-                <span key={c.email} style={ccChip}>
-                  {c.name || c.email}
-                  <button type="button" style={ccChipRemove} onClick={() => removeCc(c.email)}>×</button>
-                </span>
-              ))}
-            </div>
-          )}
-          <select
-            value=""
-            onChange={(e) => addCc(e.target.value)}
-            disabled={loadingEmployees || availableEmployees.length === 0}
-            style={inputStyle}
-          >
-            <option value="" disabled>
-              {loadingEmployees ? "Loading employees..." : "+ Add someone to CC"}
-            </option>
-            {availableEmployees.map((e) => (
-              <option key={e.email} value={e.email}>
-                {e.name}{e.designation ? ` — ${e.designation}` : ""}
-              </option>
-            ))}
-          </select>
-
-          {employeesError && (
-            <>
-              <span style={{ ...hintStyle, color: "#DC2626" }}>
-                {employeesError} — you can still add someone by email.
-              </span>
-              <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
-                <input
-                  type="text"
-                  placeholder="name@briskolive.com"
-                  value={manualCc}
-                  onChange={(e) => setManualCc(e.target.value)}
-                  style={{ ...inputStyle, flex: 1 }}
-                />
-                <button type="button" style={cancelBtn} onClick={addManualCc}>Add</button>
-              </div>
-            </>
-          )}
-
-          <span style={hintStyle}>They'll be CC'd on all emails for this ticket.</span>
+          <CcPicker value={cc} onChange={setCc} />
 
           {error && <div style={errorStyle}>{error}</div>}
 
@@ -329,35 +229,6 @@ const card = {
   display: "flex",
   flexDirection: "column",
   gap: 6,
-};
-
-const ccChipsWrap = {
-  display: "flex",
-  flexWrap: "wrap",
-  gap: 6,
-  marginTop: 2,
-};
-
-const ccChip = {
-  display: "inline-flex",
-  alignItems: "center",
-  gap: 6,
-  padding: "4px 6px 4px 10px",
-  borderRadius: 999,
-  background: "#EFF6FF",
-  color: "#1E40AF",
-  fontSize: 12,
-  fontWeight: 600,
-};
-
-const ccChipRemove = {
-  border: "none",
-  background: "none",
-  color: "#1E40AF",
-  cursor: "pointer",
-  fontSize: 14,
-  lineHeight: 1,
-  padding: 2,
 };
 
 const labelStyle = {

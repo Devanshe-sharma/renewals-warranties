@@ -215,9 +215,15 @@ router.put("/:id/manage", ticketAdminOnly, async (req, res) => {
       });
     }
 
-    const { status, priority, done_date, remarks } = req.body;
+    const { status, priority, done_date, remarks, cc } = req.body;
 
     const changes = [];
+
+    const newCc = normalizeCc(cc).filter((e) => !ticket.cc.includes(e));
+    if (newCc.length) {
+      ticket.cc = [...ticket.cc, ...newCc];
+      changes.push(`Added to CC: ${newCc.join(", ")}`);
+    }
 
     if (status && status !== ticket.status) {
       changes.push(`Status changed from "${ticket.status}" to "${status}"`);
