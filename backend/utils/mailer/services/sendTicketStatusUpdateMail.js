@@ -21,7 +21,8 @@ module.exports = async (ticket) => {
     // raiser is the excluded mailbox itself.
     to: raiserEmail && raiserEmail !== EXCLUDE_EMAIL ? ticket.raised_by_email : MAIL.ADMIN.join(","),
 
-    cc: [...MAIL.ADMIN, ...(ticket.cc || [])].filter((e) => e.toLowerCase() !== EXCLUDE_EMAIL),
+    // Management is CC'd by default here too, same as on ticket creation.
+    cc: [...MAIL.ADMIN, ...MAIL.MANAGEMENT, ...(ticket.cc || [])].filter((e) => e.toLowerCase() !== EXCLUDE_EMAIL),
 
     subject: `Ticket ${ticket.ticket_id} - Status: ${ticket.status}`,
 
