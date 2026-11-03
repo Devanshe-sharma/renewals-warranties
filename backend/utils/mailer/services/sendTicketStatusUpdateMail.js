@@ -24,7 +24,9 @@ module.exports = async (ticket) => {
     // Management is CC'd by default here too, same as on ticket creation.
     cc: [...MAIL.ADMIN, ...MAIL.MANAGEMENT, ...(ticket.cc || [])].filter((e) => e.toLowerCase() !== EXCLUDE_EMAIL),
 
-    subject: `Ticket ${ticket.ticket_id} - Status: ${ticket.status}`,
+    // Same subject format on every ticket mail (created/status/follow-up) so
+    // mail clients thread them together into one conversation per ticket.
+    subject: `Ticket ${ticket.ticket_id}: ${ticket.title}`,
 
     html: ticketStatusUpdateTemplate(ticket),
 

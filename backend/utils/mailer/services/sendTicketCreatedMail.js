@@ -24,7 +24,9 @@ module.exports = async (ticket) => {
 
     cc,
 
-    subject: `New Ticket Raised - ${ticket.ticket_id}: ${ticket.title}`,
+    // Same subject format on every ticket mail (created/status/follow-up) so
+    // mail clients thread them together into one conversation per ticket.
+    subject: `Ticket ${ticket.ticket_id}: ${ticket.title}`,
 
     html: ticketCreatedTemplate(ticket),
 

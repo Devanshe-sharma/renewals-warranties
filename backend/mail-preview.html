@@ -1,0 +1,148 @@
+<title>Ticket Mail Preview</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+:root{
+  --bg:#F5F6F8; --surface:#FFFFFF; --border:#E3E6EA; --fg:#1F2430; --muted:#6B7280;
+  --accent:#2563EB; --accent-soft:#EFF4FF; --thread:#D7DCE3;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#15171C; --surface:#1D2027; --border:#2B2F38; --fg:#E7E9EE; --muted:#9AA1AD;
+    --accent:#6D9BFF; --accent-soft:#232B3D; --thread:#343A46; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#15171C; --surface:#1D2027; --border:#2B2F38; --fg:#E7E9EE; --muted:#9AA1AD;
+  --accent:#6D9BFF; --accent-soft:#232B3D; --thread:#343A46; color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--bg); color:var(--fg);
+  font-family:"Inter",system-ui,-apple-system,Segoe UI,Arial,sans-serif;
+  padding-left:max(16px, env(safe-area-inset-left,0px));
+  padding-right:max(16px, env(safe-area-inset-right,0px));
+  padding-block:28px;
+}
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap');
+.wrap{max-width:760px;margin:0 auto}
+h1{font-size:19px;font-weight:700;margin:0 0 4px}
+.sub{color:var(--muted);font-size:13px;margin:0 0 22px}
+.thread-label{
+  display:flex;align-items:center;gap:10px;margin:0 0 10px;
+}
+.thread-label .subject{
+  font-family:"JetBrains Mono",monospace; font-size:12.5px; font-weight:500;
+  background:var(--accent-soft); color:var(--accent); padding:4px 10px; border-radius:6px;
+  border:1px solid var(--border);
+}
+.thread{
+  position:relative; border-left:2px solid var(--thread); margin:0 0 30px 9px; padding-left:22px;
+}
+.mail{
+  background:var(--surface); border:1px solid var(--border); border-radius:10px;
+  margin-bottom:16px; overflow:hidden; position:relative;
+}
+.mail::before{
+  content:""; position:absolute; left:-27px; top:20px; width:10px; height:10px;
+  border-radius:50%; background:var(--accent); border:2px solid var(--bg);
+}
+.mail-head{
+  display:flex; justify-content:space-between; align-items:flex-start; gap:12px;
+  padding:14px 16px; border-bottom:1px solid var(--border);
+}
+.mail-head .meta{min-width:0}
+.mail-head .tag{
+  font-size:10.5px; font-weight:700; letter-spacing:.04em; text-transform:uppercase;
+  color:var(--accent); margin-bottom:3px;
+}
+.mail-head .subj{font-size:13.5px; font-weight:600; word-break:break-word}
+.mail-head .from{font-size:12px; color:var(--muted); margin-top:3px; white-space:nowrap}
+.mail-body{padding:14px 16px}
+table{border-collapse:collapse; width:100%; font-size:12.5px}
+td{border:1px solid var(--border); padding:7px 10px; vertical-align:top}
+td:first-child{width:38%; color:var(--muted); font-weight:600; white-space:nowrap}
+.note{font-size:12px; color:var(--muted); margin-top:10px; line-height:1.5}
+.note b{color:var(--fg)}
+</style>
+
+<div class="wrap">
+  <h1>Ticket mail preview</h1>
+  <p class="sub">All three ticket emails now share one subject line, so a mail client groups them into a single thread per ticket.</p>
+
+  <div class="thread-label">Subject used by every mail on this ticket:
+    <span class="subject">Ticket TKT-0042: VPN access not working</span>
+  </div>
+
+  <div class="thread">
+
+    <div class="mail">
+      <div class="mail-head">
+        <div class="meta">
+          <div class="tag">1 · Ticket created</div>
+          <div class="subj">Ticket TKT-0042: VPN access not working</div>
+        </div>
+        <div class="from">to Admin · cc Management</div>
+      </div>
+      <div class="mail-body">
+        <p style="margin:0 0 10px;font-size:13px">A new support ticket has been raised in the system.</p>
+        <table>
+          <tr><td>Ticket ID</td><td>TKT-0042</td></tr>
+          <tr><td>Title</td><td>VPN access not working</td></tr>
+          <tr><td>Description</td><td>Can't connect to office VPN since this morning, getting a timeout.</td></tr>
+          <tr><td>Priority</td><td>Medium</td></tr>
+          <tr><td>Raised By</td><td>Devanshe</td></tr>
+          <tr><td>Plan Date</td><td>5 November 2026</td></tr>
+          <tr><td>Attachment</td><td>-</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <div class="mail">
+      <div class="mail-head">
+        <div class="meta">
+          <div class="tag">2 · Follow-up requested</div>
+          <div class="subj">Ticket TKT-0042: VPN access not working</div>
+        </div>
+        <div class="from">to Admin · cc Management</div>
+      </div>
+      <div class="mail-body">
+        <p style="margin:0 0 10px;font-size:13px"><b>Devanshe</b> is asking for a follow-up on this ticket.</p>
+        <table>
+          <tr><td>Ticket ID</td><td>TKT-0042</td></tr>
+          <tr><td>Title</td><td>VPN access not working</td></tr>
+          <tr><td>Status</td><td>Open</td></tr>
+          <tr><td>Priority</td><td>Medium</td></tr>
+          <tr><td>Raised By</td><td>Devanshe</td></tr>
+          <tr><td>Follow-up Message</td><td>Any update on this? It's been two days.</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <div class="mail">
+      <div class="mail-head">
+        <div class="meta">
+          <div class="tag">3 · Status updated</div>
+          <div class="subj">Ticket TKT-0042: VPN access not working</div>
+        </div>
+        <div class="from">to Devanshe · cc Admin, Management</div>
+      </div>
+      <div class="mail-body">
+        <p style="margin:0 0 10px;font-size:13px">A support ticket has been updated.</p>
+        <table>
+          <tr><td>Ticket ID</td><td>TKT-0042</td></tr>
+          <tr><td>Title</td><td>VPN access not working</td></tr>
+          <tr><td>Status</td><td>Resolved</td></tr>
+          <tr><td>Priority</td><td>Medium</td></tr>
+          <tr><td>Assigned To</td><td>Admin</td></tr>
+          <tr><td>Done Date</td><td>5 November 2026</td></tr>
+          <tr><td>Raised By</td><td>Devanshe</td></tr>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+  <p class="note">
+    Before this change each mail had its own subject (<b>"New Ticket Raised - ..."</b>, <b>"Ticket ... - Status: ..."</b>, <b>"Follow-up Requested - ..."</b>), so most mail clients (Gmail, Outlook) started a separate thread for each. Now every mail for a given ticket uses <b>"Ticket &lt;ticket_id&gt;: &lt;title&gt;"</b>, so they land in one conversation.
+  </p>
+</div>

@@ -6,7 +6,7 @@ const activitySchema = new mongoose.Schema(
     author_name: { type: String, required: true },
     action: {
       type: String,
-      enum: ['created', 'comment', 'status_change', 'assigned'],
+      enum: ['created', 'comment', 'status_change', 'assigned', 'followup'],
       required: true,
     },
     message: { type: String, default: '' },

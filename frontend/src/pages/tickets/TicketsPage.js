@@ -49,6 +49,10 @@ export default function TicketsPage({ mineOnly = false }) {
   const [closeCc, setCloseCc] = useState([]);
   const [closing, setClosing] = useState(false);
 
+  const [followupMessage, setFollowupMessage] = useState("");
+  const [sendingFollowup, setSendingFollowup] = useState(false);
+  const [followupNotice, setFollowupNotice] = useState("");
+
   const authHeaders = {
     "Content-Type": "application/json",
     "Authorization": `Bearer ${token}`,
@@ -92,6 +96,11 @@ export default function TicketsPage({ mineOnly = false }) {
   const selectedTicket = tickets.find((t) => t._id === selectedId) || null;
   const closeTicket = tickets.find((t) => t._id === closeTicketId) || null;
 
+  useEffect(() => {
+    setFollowupMessage("");
+    setFollowupNotice("");
+  }, [selectedId]);
+
   const openCloseConfirm = (ticket) => {
     setSelectedId(null);
     setCloseRemarks("");
@@ -126,6 +135,34 @@ export default function TicketsPage({ mineOnly = false }) {
       console.error(err);
     } finally {
       setClosing(false);
+    }
+  };
+
+  const handleSendFollowup = async () => {
+    if (!selectedTicket || !followupMessage.trim()) return;
+    setSendingFollowup(true);
+    setFollowupNotice("");
+
+    try {
+      const res = await fetch(`${API}/api/tickets/${selectedTicket._id}/followup`, {
+        method: "POST",
+        headers: authHeaders,
+        body: JSON.stringify({ message: followupMessage.trim() }),
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        setFollowupMessage("");
+        setFollowupNotice("Reminder sent to admin.");
+        fetchTickets();
+      } else {
+        setFollowupNotice(data.message || "Failed to send follow-up");
+      }
+    } catch (err) {
+      setFollowupNotice(err.message);
+    } finally {
+      setSendingFollowup(false);
     }
   };
 
@@ -242,7 +279,13 @@ export default function TicketsPage({ mineOnly = false }) {
           <TicketDetail
             ticket={selectedTicket}
             isAdmin={isAdmin}
+            isRaiser={selectedTicket.raised_by_id === user.id}
             onCloseRequest={() => openCloseConfirm(selectedTicket)}
+            followupMessage={followupMessage}
+            setFollowupMessage={setFollowupMessage}
+            onSendFollowup={handleSendFollowup}
+            sendingFollowup={sendingFollowup}
+            followupNotice={followupNotice}
           />
         )}
       </Modal>
@@ -291,7 +334,7 @@ export default function TicketsPage({ mineOnly = false }) {
   );
 }
 
-function TicketDetail({ ticket, isAdmin, onCloseRequest }) {
+function TicketDetail({ ticket, isAdmin, isRaiser, onCloseRequest, followupMessage, setFollowupMessage, onSendFollowup, sendingFollowup, followupNotice }) {
   const isPending = PENDING_STATUSES.includes(ticket.status);
 
   return (
@@ -344,12 +387,41 @@ function TicketDetail({ ticket, isAdmin, onCloseRequest }) {
         </div>
       )}
 
+      {isRaiser && isPending && (
+        <>
+          <div style={{ borderTop: "1px solid #E5E7EB", margin: "4px 0 16px" }} />
+          <div style={followupBox}>
+          <div style={labelStyle}>Ask for a follow-up</div>
+          <div style={{ fontSize: 12, color: "#6B7280", marginBottom: 8 }}>
+            Send a one-off reminder email to the admin with a message — this doesn't happen automatically.
+          </div>
+          <textarea
+            value={followupMessage}
+            onChange={(e) => setFollowupMessage(e.target.value)}
+            rows={2}
+            placeholder="e.g. Any update on this? It's been a few days..."
+            style={{ ...inputStyle, resize: "vertical" }}
+          />
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 8 }}>
+            <button
+              style={saveBtn}
+              onClick={onSendFollowup}
+              disabled={sendingFollowup || !followupMessage.trim()}
+            >
+              {sendingFollowup ? "Sending..." : "Send Reminder"}
+            </button>
+            {followupNotice && <span style={{ fontSize: 12, color: "#065F46" }}>{followupNotice}</span>}
+          </div>
+          </div>
+        </>
+      )}
+
       <div style={{ marginTop: 16 }}>
         <div style={labelStyle}>Activity</div>
         <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 6 }}>
           {(ticket.activity || []).map((a, i) => (
-            <div key={i} style={activityRow}>
-              <b>{a.author_name}</b>: {a.message}
+            <div key={i} style={a.action === "followup" ? followupActivityRow : activityRow}>
+              <b>{a.action === "followup" ? "🔔 " : ""}{a.author_name}</b>: {a.message}
               <span style={activityTime}>
                 {new Date(a.created_at).toLocaleString("en-IN")}
               </span>
@@ -428,6 +500,14 @@ const remarksBox = {
   border: "1px solid #FDE68A",
   borderRadius: 8,
   padding: "10px 12px",
+  marginBottom: 16,
+};
+
+const followupBox = {
+  background: "#F9FAFB",
+  border: "1px solid #E5E7EB",
+  borderRadius: 8,
+  padding: 12,
   marginBottom: 16,
 };
 
@@ -537,6 +617,12 @@ const activityRow = {
   display: "flex",
   justifyContent: "space-between",
   gap: 10,
+};
+
+const followupActivityRow = {
+  ...activityRow,
+  background: "#FFFBEB",
+  border: "1px solid #FDE68A",
 };
 
 const activityTime = {

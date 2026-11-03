@@ -6,6 +6,9 @@ const { getHrEmployees } = require("../utils/hrEmployees");
 
 const sendTicketCreatedMail = require("../utils/mailer/services/sendTicketCreatedMail");
 const sendTicketStatusUpdateMail = require("../utils/mailer/services/sendTicketStatusUpdateMail");
+const sendTicketFollowupMail = require("../utils/mailer/services/sendTicketFollowupMail");
+
+const OPEN_STATUSES = ["Open", "In Progress"];
 
 // Full ticket access (see every ticket, close/delete any ticket) — not just
 // whoever HR-Forms happens to report as 'Admin' for the day:
@@ -261,6 +264,69 @@ router.put("/:id/manage", ticketAdminOnly, async (req, res) => {
         console.error("Ticket status update mail failed:", err)
       );
     }
+
+    res.json({
+      success: true,
+      data: ticket,
+    });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      message: err.message,
+    });
+  }
+});
+
+//
+// REQUEST FOLLOW-UP — raiser only, manual (not automated/scheduled). Lets
+// the person who raised the ticket send a one-off reminder email to the
+// admin with a message, instead of waiting silently.
+//
+router.post("/:id/followup", async (req, res) => {
+  try {
+    const ticket = await Ticket.findById(req.params.id);
+
+    if (!ticket) {
+      return res.status(404).json({
+        success: false,
+        message: "Ticket not found",
+      });
+    }
+
+    if (ticket.raised_by_id !== req.user.id) {
+      return res.status(403).json({
+        success: false,
+        message: "Only the person who raised this ticket can request a follow-up",
+      });
+    }
+
+    if (!OPEN_STATUSES.includes(ticket.status)) {
+      return res.status(400).json({
+        success: false,
+        message: "This ticket is already closed — nothing to follow up on",
+      });
+    }
+
+    const message = req.body.message?.trim();
+    if (!message) {
+      return res.status(400).json({
+        success: false,
+        message: "A message is required to request a follow-up",
+      });
+    }
+
+    ticket.activity.push({
+      author_id: req.user.id,
+      author_name: req.user.name,
+      action: "followup",
+      message,
+    });
+
+    await ticket.save();
+
+    sendTicketFollowupMail(ticket, message).catch((err) =>
+      console.error("Ticket follow-up mail failed:", err)
+    );
 
     res.json({
       success: true,
