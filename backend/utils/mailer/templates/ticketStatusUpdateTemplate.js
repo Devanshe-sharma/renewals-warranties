@@ -52,6 +52,11 @@ module.exports = (ticket) => {
           <td>${ticket.raised_by_name || "-"}</td>
         </tr>
 
+        <tr>
+          <td><b>Remarks</b></td>
+          <td>${ticket.remarks || "-"}</td>
+        </tr>
+
       </table>
 
       <p style="margin-top: 20px;">
