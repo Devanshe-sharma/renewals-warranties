@@ -12,10 +12,12 @@ const EXCLUDE_EMAIL = "software.developer@briskolive.com";
 module.exports = async (ticket) => {
 
   // Management is CC'd by default on every ticket — a silent side effect,
-  // never surfaced on the raise-ticket form itself.
+  // never surfaced on the raise-ticket form itself. The raiser is CC'd too,
+  // so they get a copy confirming their own ticket was raised.
   const cc = [
     ...(ticket.cc || []),
     ...MAIL.MANAGEMENT,
+    ...(ticket.raised_by_email ? [ticket.raised_by_email] : []),
   ].filter((e) => e.toLowerCase() !== EXCLUDE_EMAIL);
 
   return await sendMail({
