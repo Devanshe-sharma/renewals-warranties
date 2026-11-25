@@ -13,6 +13,8 @@ import {
   PersonOutlined as PersonOutlineIcon,
   ExpandLess as ExpandLessIcon,
   ExpandMore as ExpandMoreIcon,
+  FlightTakeoff as FlightTakeoffIcon,
+  AddCircleOutlined as AddCircleOutlineIcon,
 } from '@mui/icons-material';
 import { useLocation, Link } from 'react-router-dom';
 import { UserContext } from '../context/UserContext';
@@ -24,7 +26,7 @@ const BRAND_BLUE = '#1976d2';
 export default function Sidebar() {
   const location = useLocation();
   const { user } = useContext(UserContext);
-  const [openGroups, setOpenGroups] = useState({ Tickets: true });
+  const [openGroups, setOpenGroups] = useState({ Tickets: true, Travel: true });
 
   const isActive = (path) => {
     return location.pathname === path || location.pathname.startsWith(path + '?');
@@ -46,6 +48,15 @@ export default function Sidebar() {
       subItems: [
         { to: '/tickets', text: 'All Tickets', icon: <ListAltIcon /> },
         { to: '/tickets/my', text: 'My Tickets', icon: <PersonOutlineIcon /> },
+      ],
+    },
+    {
+      text: 'Travel Management',
+      icon: <FlightTakeoffIcon />,
+      open: !!openGroups.Travel,
+      onClick: () => setOpenGroups((g) => ({ ...g, Travel: !g.Travel })),
+      subItems: [
+        { to: '/travel/request', text: 'Travel Request', icon: <AddCircleOutlineIcon /> },
       ],
     },
     // { to: '/statusrules', text: 'Status Rules', icon: <RuleIcon /> },

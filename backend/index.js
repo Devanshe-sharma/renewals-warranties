@@ -14,6 +14,7 @@ const statusRulesRoutes = require('./routes/statusRulesRoutes');
 const ticketRoutes = require('./routes/ticketRoutes');
 const uploadRoutes = require('./routes/uploadRoutes');
 const authRoutes = require('./routes/authRoutes');
+const travelRoutes = require('./routes/travelRoutes');
 const { authMiddleware } = require('./middleware/auth');
 
 const app = express();
@@ -39,6 +40,7 @@ app.use('/api/renewal-events', authMiddleware, updaterenewalRoute);
 app.use('/api/status-rules', authMiddleware, statusRulesRoutes);
 app.use('/api/tickets', authMiddleware, ticketRoutes);
 app.use('/api/uploads', authMiddleware, uploadRoutes);
+app.use('/api/travel', authMiddleware, travelRoutes);
 // app.use("/api/test", require("./routes/testMail"));
 
 mongoose.connect(process.env.MONGO_URI)
