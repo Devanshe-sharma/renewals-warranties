@@ -143,13 +143,6 @@ export default function TravelManagementPage({ onNew }) {
                     <td style={s.td}>{t.dept}</td>
                     <td style={s.td}>
                       {t.from} → {t.to}
-                      <div style={s.sub}>{t.outMode}</div>
-                      {t.journeyType && (
-                        <div style={s.sub}>
-                          {t.journeyType}
-                          {t.journeyType === "Unplanned" && t.unplannedApproved && ` · Approved: ${t.unplannedApproved}`}
-                        </div>
-                      )}
                     </td>
                     <td style={{ ...s.td, whiteSpace: "nowrap" }}>
                       {fmtDate(t.outDate)}
