@@ -143,9 +143,7 @@ export default function TravelManagementPage({ onNew }) {
                     <td style={s.td}>{t.dept}</td>
                     <td style={s.td}>
                       {t.from} → {t.to}
-                      <div style={s.sub}>
-                        {[t.outMode, t.railEntitlement].filter(Boolean).join(" · ")}
-                      </div>
+                      <div style={s.sub}>{t.outMode}</div>
                       {t.journeyType && (
                         <div style={s.sub}>
                           {t.journeyType}
