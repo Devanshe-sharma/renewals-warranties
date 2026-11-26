@@ -14,7 +14,6 @@ import {
   ExpandLess as ExpandLessIcon,
   ExpandMore as ExpandMoreIcon,
   FlightTakeoff as FlightTakeoffIcon,
-  AddCircleOutlined as AddCircleOutlineIcon,
 } from '@mui/icons-material';
 import { useLocation, Link } from 'react-router-dom';
 import { UserContext } from '../context/UserContext';
@@ -26,7 +25,7 @@ const BRAND_BLUE = '#1976d2';
 export default function Sidebar() {
   const location = useLocation();
   const { user } = useContext(UserContext);
-  const [openGroups, setOpenGroups] = useState({ Tickets: true, Travel: true });
+  const [openGroups, setOpenGroups] = useState({ Tickets: true });
 
   const isActive = (path) => {
     return location.pathname === path || location.pathname.startsWith(path + '?');
@@ -50,15 +49,9 @@ export default function Sidebar() {
         { to: '/tickets/my', text: 'My Tickets', icon: <PersonOutlineIcon /> },
       ],
     },
-    {
-      text: 'Travel Management',
-      icon: <FlightTakeoffIcon />,
-      open: !!openGroups.Travel,
-      onClick: () => setOpenGroups((g) => ({ ...g, Travel: !g.Travel })),
-      subItems: [
-        { to: '/travel/request', text: 'Travel Request', icon: <AddCircleOutlineIcon /> },
-      ],
-    },
+    // Single entry: the table page; the request form opens from its navbar
+    // button, so /travel/* keeps this item highlighted.
+    { to: '/travel', text: 'Travel Management', icon: <FlightTakeoffIcon />, matchPrefix: true },
     // { to: '/statusrules', text: 'Status Rules', icon: <RuleIcon /> },
   ];
 
@@ -275,7 +268,7 @@ export default function Sidebar() {
             );
           }
 
-          const active = isActive(item.to);
+          const active = isActive(item.to) || (item.matchPrefix && location.pathname.startsWith(item.to + '/'));
           return (
             <ListItemButton
               key={item.text}

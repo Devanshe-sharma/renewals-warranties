@@ -21,6 +21,7 @@ import StatusRulesPage from "./pages/StatusRulesPage";
 import TicketsPage from "./pages/tickets/TicketsPage";
 import MyTicketsPage from "./pages/tickets/MyTicketsPage";
 import TravelRequestForm from "./pages/travel/TravelRequestForm";
+import TravelManagementPage from "./pages/travel/TravelManagementPage";
 import SsoCallback from "./pages/SsoCallback";
 import SsoLogout from "./pages/SsoLogout";
 import AuthGate from "./components/AuthGate";
@@ -201,12 +202,23 @@ function AppContent() {
           />
 
           <Route
+            path="/travel"
+            element={
+              <TravelManagementPage
+                onNew={() => navigate("/travel/request")}
+              />
+            }
+          />
+
+          <Route
             path="/travel/request"
             element={
               <TravelRequestForm
-                onSave={(trip) =>
-                  showToast(`${trip.id} created and sent for approval.`)
-                }
+                onSave={(trip) => {
+                  showToast(`${trip.id} created and sent for approval.`);
+                  navigate("/travel");
+                }}
+                onCancel={() => navigate("/travel")}
               />
             }
           />
