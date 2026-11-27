@@ -1,5 +1,6 @@
 require('dotenv').config();
 require("./cron/renewalReminderCron");
+require("./cron/travelEscalationCron");
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');

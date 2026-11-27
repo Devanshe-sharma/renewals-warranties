@@ -2,9 +2,9 @@ import React, { useContext, useEffect, useMemo, useState } from "react";
 import { Autocomplete, TextField } from "@mui/material";
 import { UserContext } from "../../context/UserContext";
 import Navbar, { NavbarButton } from "../../components/navbar";
-import { loadTrips, saveTrips } from "./travelStore";
-
-const API = process.env.REACT_APP_API_URL || "http://localhost:3003";
+import {
+  travelApi, errorMessage, departureAt, eventLag, fmtDate, fmtDateTime, MIN_NOTICE_HOURS, EVENT_GRACE_DAYS,
+} from "./travelStore";
 
 const DEPARTMENTS = ["Admin", "Engineering", "Production", "Sales", "HR", "Accounts", "IT", "Management"];
 const MODES = ["Flight", "Train", "Bus", "Company Car", "Hired Cab", "Own Vehicle", "Multiple Modes", "Other"];
@@ -89,11 +89,14 @@ const blankForm = () => ({
   category: "",
   dept: "Admin",
   manager: "",
+  managerEmail: "",
   purpose: "",
+  eventId: "",
   from: "",
   to: "",
   journeyType: "Planned",
   unplannedApproved: "",
+  bookingType: "Normal",
   outDate: "",
   outTime: "",
   outMode: "Train",
@@ -115,21 +118,28 @@ const blankForm = () => ({
 
 // Form fields filled in from an HR-Forms employee record. Origin defaults to
 // their office location but only if the user hasn't typed one already.
-const employeeFields = (emp, form) => ({
-  employee: emp.name,
-  employeeEmail: emp.email,
-  empid: emp.empId || "",
-  designation: emp.designation || "",
-  category: categoryForDesignation(emp.designation) || form.category,
-  dept: emp.dept || "Admin",
-  manager: emp.reportingHead || "",
-  from: form.from || emp.location || "",
-});
+// The manager is looked up by name in the same list so the approval email
+// has an address to go to.
+const employeeFields = (emp, form, employees = []) => {
+  const mgr = employees.find((e) => e.name.toLowerCase() === (emp.reportingHead || "").toLowerCase());
+  return {
+    employee: emp.name,
+    employeeEmail: emp.email,
+    empid: emp.empId || "",
+    designation: emp.designation || "",
+    category: categoryForDesignation(emp.designation) || form.category,
+    dept: emp.dept || "Admin",
+    manager: emp.reportingHead || "",
+    managerEmail: mgr?.email || "",
+    from: form.from || emp.location || "",
+  };
+};
 
-function nextTravelId(trips) {
-  const max = Math.max(0, ...trips.map((t) => +((t.id || "").match(/(\d+)$/) || [])[1] || 0));
-  return "BO-TR-" + String(max + 1).padStart(3, "0");
-}
+// Earliest departure date the date picker offers for a booking type.
+const minDepartureDate = (bookingType) => {
+  const d = new Date(Date.now() + (MIN_NOTICE_HOURS[bookingType] || 48) * 3600000);
+  return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+};
 
 const s = {
   page: { maxWidth: 1100, margin: "0 auto", padding: 20 },
@@ -195,6 +205,15 @@ const s = {
     padding: "9px 12px",
     fontSize: 13,
   },
+  warn: {
+    marginTop: 8,
+    background: "#fef2f2",
+    border: "1px solid #fecaca",
+    color: "#991b1b",
+    borderRadius: 8,
+    padding: "9px 12px",
+    fontSize: 13,
+  },
   error: {
     background: "#fef2f2",
     color: "#b91c1c",
@@ -219,10 +238,14 @@ export default function TravelRequestForm({ onSave, onCancel }) {
   const { user, token } = useContext(UserContext);
   const [form, setForm] = useState(blankForm);
   const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
 
   const [employees, setEmployees] = useState([]);
   const [loadingEmployees, setLoadingEmployees] = useState(true);
   const [employeesError, setEmployeesError] = useState("");
+
+  const [events, setEvents] = useState([]);
+  const [eventsError, setEventsError] = useState("");
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
@@ -233,10 +256,13 @@ export default function TravelRequestForm({ onSave, onCancel }) {
       normalizeTravelRules({
         ...f,
         ...(emp
-          ? employeeFields(emp, f)
-          : { employee: "", employeeEmail: "", empid: "", designation: "", category: "", manager: "" }),
+          ? employeeFields(emp, f, employees)
+          : { employee: "", employeeEmail: "", empid: "", designation: "", category: "", manager: "", managerEmail: "" }),
       })
     );
+
+  const pickManager = (emp) =>
+    setForm((f) => ({ ...f, manager: emp?.name || "", managerEmail: emp?.email || "" }));
 
   // Category and journey type decide which modes are allowed and whether the
   // approval question is asked, so re-check those whenever either changes.
@@ -247,29 +273,24 @@ export default function TravelRequestForm({ onSave, onCancel }) {
 
   useEffect(() => {
     let cancelled = false;
-    fetch(`${API}/api/travel/employees`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then(async (r) => ({ status: r.status, data: await r.json().catch(() => ({})) }))
-      .then(({ status, data }) => {
-        if (cancelled) return;
-        if (status === 401) {
-          // The backend's 12h session ran out; HR-Forms login is still fine,
-          // so logging out and back in gets a fresh one.
-          setEmployeesError("Your session has expired — log out and log in again to load the employee list");
-          return;
-        }
-        if (!data.success) {
-          setEmployeesError(data.message || data.error || `Could not load employee list (HTTP ${status})`);
-          return;
-        }
-        setEmployees(data.data);
-        // Default to the logged-in user, like most requests will be.
-        const me = data.data.find((e) => e.email === (user?.email || "").toLowerCase());
-        if (me) setForm((f) => (f.employee ? f : normalizeTravelRules({ ...f, ...employeeFields(me, f) })));
-      })
-      .catch(() => !cancelled && setEmployeesError(`Could not reach the server at ${API}`))
-      .finally(() => !cancelled && setLoadingEmployees(false));
+    travelApi(token, "/employees").then((r) => {
+      if (cancelled) return;
+      setLoadingEmployees(false);
+      if (!r.ok) {
+        setEmployeesError(errorMessage(r, "Could not load employee list"));
+        return;
+      }
+      const list = r.data.data;
+      setEmployees(list);
+      // Default to the logged-in user, like most requests will be.
+      const me = list.find((e) => e.email === (user?.email || "").toLowerCase());
+      if (me) setForm((f) => (f.employee ? f : normalizeTravelRules({ ...f, ...employeeFields(me, f, list) })));
+    });
+    travelApi(token, "/events").then((r) => {
+      if (cancelled) return;
+      if (r.ok) setEvents(r.data.data);
+      else setEventsError(errorMessage(r, "Could not load events"));
+    });
     return () => { cancelled = true; };
   }, [token, user?.email]);
 
@@ -283,6 +304,9 @@ export default function TravelRequestForm({ onSave, onCancel }) {
   }, [employees, form.dept]);
 
   const selectedEmployee = employees.find((e) => e.empId === form.empid && e.name === form.employee) || null;
+  const selectedManager = employees.find((e) => e.email && e.email === form.managerEmail) || null;
+  const selectedEvent = events.find((e) => e.id === form.eventId) || null;
+  const lag = selectedEvent ? eventLag(selectedEvent.createdAt) : null;
 
   const input = (k, type = "text", extra = {}) => (
     <input style={s.input} type={type} value={form[k]} onChange={set(k)} {...extra} />
@@ -312,7 +336,37 @@ export default function TravelRequestForm({ onSave, onCancel }) {
     </div>
   );
 
-  const handleSubmit = (e) => {
+  // Searchable HR-Forms employee dropdown, used for the employee and the manager.
+  const employeePicker = (value, onPick, placeholder) => (
+    <Autocomplete
+      size="small"
+      options={employees}
+      loading={loadingEmployees}
+      value={value}
+      onChange={(_, emp) => onPick(emp)}
+      getOptionLabel={(e) => e.name}
+      isOptionEqualToValue={(a, b) => a.empId === b.empId}
+      renderOption={(props, e) => (
+        <li {...props} key={e.empId}>
+          <div>
+            <div style={{ fontSize: 14 }}>{e.name}</div>
+            <div style={{ fontSize: 11, color: "#6b7280" }}>
+              {[e.empId, e.designation, e.dept].filter(Boolean).join(" · ")}
+            </div>
+          </div>
+        </li>
+      )}
+      renderInput={(params) => (
+        <TextField
+          {...params}
+          placeholder={loadingEmployees ? "Loading employees..." : placeholder}
+          sx={{ "& .MuiOutlinedInput-root": { borderRadius: "8px", fontSize: 14, background: "#fff" } }}
+        />
+      )}
+    />
+  );
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
 
@@ -341,42 +395,37 @@ export default function TravelRequestForm({ onSave, onCancel }) {
       return;
     }
 
-    const trips = loadTrips();
-    const id = nextTravelId(trips);
-    const trip = {
-      ...form,
-      id,
-      nights: +form.nights || 0,
-      estimate: +form.estimate || 0,
-      railEntitlement: byTrain ? rail : "",
-      actual: 0,
-      paid: 0,
-      outPNR: "",
-      outStatus: "Pending",
-      returnFrom: returnOn ? form.returnFrom || form.to : "",
-      returnTo: returnOn ? form.returnTo || form.from : "",
-      returnPNR: "",
-      returnStatus: returnOn ? "Pending" : "Not Required",
-      hotelName: "",
-      hotelRef: "",
-      hotelStatus: hotelOn ? "Pending" : "Not Required",
-      status: "Pending Approval",
-      approvalRemark: "Awaiting manager approval",
-      adminRemark: form.remarks || "",
-      invoiceStatus: "Pending",
-      createdBy: user?.email || "",
-      createdAt: new Date().toISOString(),
-    };
+    // Admin needs 2 days to arrange tickets (24h for Tatkal). The backend
+    // enforces this too.
+    const dep = departureAt(form.outDate, form.outTime);
+    const needHours = MIN_NOTICE_HOURS[form.bookingType] || 48;
+    if (!dep || dep.getTime() - Date.now() < needHours * 3600000) {
+      setError(
+        form.bookingType === "Tatkal"
+          ? "Tatkal requests must be raised at least 24 hours before departure."
+          : "Travel requests must be raised at least 2 days before departure so Admin can arrange tickets. For a Tatkal booking, choose Booking Type “Tatkal” (minimum 24 hours)."
+      );
+      return;
+    }
 
-    try {
-      saveTrips([trip, ...trips]);
-    } catch (err) {
-      setError("Could not save the request: " + err.message);
+    setSaving(true);
+    const r = await travelApi(token, "/requests", {
+      method: "POST",
+      body: {
+        ...form,
+        railEntitlement: byTrain ? rail : "",
+        returnFrom: returnOn ? form.returnFrom || form.to : "",
+        returnTo: returnOn ? form.returnTo || form.from : "",
+      },
+    });
+    setSaving(false);
+    if (!r.ok) {
+      setError(errorMessage(r, "Could not submit the request"));
       return;
     }
 
     setForm(blankForm());
-    onSave && onSave(trip);
+    onSave && onSave(r.data.data);
   };
 
   return (
@@ -410,36 +459,9 @@ export default function TravelRequestForm({ onSave, onCancel }) {
           <h3 style={s.h3}>1. Employee &amp; Purpose</h3>
           <div style={s.grid}>
             <Field label="Employee Name *">
-              {employeesError ? (
-                input("employee", "text", { placeholder: "Type employee name" })
-              ) : (
-                <Autocomplete
-                  size="small"
-                  options={employees}
-                  loading={loadingEmployees}
-                  value={selectedEmployee}
-                  onChange={(_, emp) => pickEmployee(emp)}
-                  getOptionLabel={(e) => e.name}
-                  isOptionEqualToValue={(a, b) => a.empId === b.empId}
-                  renderOption={(props, e) => (
-                    <li {...props} key={e.empId}>
-                      <div>
-                        <div style={{ fontSize: 14 }}>{e.name}</div>
-                        <div style={{ fontSize: 11, color: "#6b7280" }}>
-                          {[e.empId, e.designation, e.dept].filter(Boolean).join(" · ")}
-                        </div>
-                      </div>
-                    </li>
-                  )}
-                  renderInput={(params) => (
-                    <TextField
-                      {...params}
-                      placeholder={loadingEmployees ? "Loading employees..." : "Search employee"}
-                      sx={{ "& .MuiOutlinedInput-root": { borderRadius: "8px", fontSize: 14, background: "#fff" } }}
-                    />
-                  )}
-                />
-              )}
+              {employeesError
+                ? input("employee", "text", { placeholder: "Type employee name" })
+                : employeePicker(selectedEmployee, pickEmployee, "Search employee")}
               {employeesError && (
                 <span style={{ fontSize: 11, color: "#b91c1c" }}>
                   {employeesError} — type the name instead.
@@ -457,7 +479,38 @@ export default function TravelRequestForm({ onSave, onCancel }) {
               )}
             </Field>
             <Field label="Department *">{select("dept", departments)}</Field>
-            <Field label="Approving Manager *">{input("manager", "text", { placeholder: "Auto-filled from reporting head" })}</Field>
+            <Field label="Approving Manager *">
+              {employeesError
+                ? input("manager", "text", { placeholder: "Type manager name" })
+                : employeePicker(selectedManager, pickManager, form.manager || "Auto-filled from reporting head")}
+              {!employeesError && form.manager && !form.managerEmail && (
+                <span style={{ fontSize: 11, color: "#b45309" }}>
+                  “{form.manager}” isn't in the employee list — pick the manager so the approval email reaches them.
+                </span>
+              )}
+            </Field>
+            <Field label="Related Event (HR-Forms Outing)" full>
+              <select style={s.input} value={form.eventId} onChange={set("eventId")}>
+                <option value="">Not linked to an event</option>
+                {events.map((ev) => (
+                  <option key={ev.id} value={ev.id}>
+                    {ev.name}
+                    {ev.date ? ` — ${fmtDate(ev.date)}` : ""}
+                    {ev.place ? ` · ${ev.place}` : ""}
+                  </option>
+                ))}
+              </select>
+              {eventsError && <span style={{ fontSize: 11, color: "#b91c1c" }}>{eventsError}</span>}
+              {selectedEvent && lag && (
+                <div style={lag.score < 0 ? s.warn : s.note}>
+                  Event created on <b>{fmtDateTime(selectedEvent.createdAt)}</b> · travel request raised{" "}
+                  <b>{lag.days === 0 ? "the same day" : `${lag.days} day${lag.days === 1 ? "" : "s"} later`}</b>.{" "}
+                  {lag.score < 0
+                    ? <>Raised after the {EVENT_GRACE_DAYS}-day grace period — late score <b>{lag.score}</b>. Your manager will see this.</>
+                    : <>Within the {EVENT_GRACE_DAYS}-day grace period — no late score.</>}
+                </div>
+              )}
+            </Field>
             <Field label="Business Purpose *" full>
               <textarea
                 style={{ ...s.input, minHeight: 70, resize: "vertical" }}
@@ -486,7 +539,15 @@ export default function TravelRequestForm({ onSave, onCancel }) {
             )}
             <Field label="Origin *">{input("from")}</Field>
             <Field label="Destination *">{input("to")}</Field>
-            <Field label="Departure Date *">{input("outDate", "date")}</Field>
+            <Field label="Booking Type *">
+              {select("bookingType", ["Normal", "Tatkal"])}
+              <span style={{ fontSize: 11, color: "#6b7280" }}>
+                {form.bookingType === "Tatkal"
+                  ? "Tatkal: raise at least 24 hours before departure."
+                  : "Raise at least 2 days before departure so Admin can arrange tickets."}
+              </span>
+            </Field>
+            <Field label="Departure Date *">{input("outDate", "date", { min: minDepartureDate(form.bookingType) })}</Field>
             <Field label="Departure Time Slot">{select("outTime", TIME_SLOTS, { placeholder: "Select time slot" })}</Field>
             <Field label="Onward Mode">{select("outMode", modes)}</Field>
           </div>
@@ -540,7 +601,9 @@ export default function TravelRequestForm({ onSave, onCancel }) {
           {error && <div style={s.error}>{error}</div>}
 
           <div style={s.actions}>
-            <button type="submit" style={s.primary}>Submit for Approval</button>
+            <button type="submit" style={{ ...s.primary, opacity: saving ? 0.6 : 1 }} disabled={saving}>
+              {saving ? "Submitting..." : "Submit for Approval"}
+            </button>
             <button type="reset" style={s.secondary}>Clear Form</button>
           </div>
         </form>

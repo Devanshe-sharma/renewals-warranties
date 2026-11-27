@@ -215,7 +215,7 @@ function AppContent() {
             element={
               <TravelRequestForm
                 onSave={(trip) => {
-                  showToast(`${trip.id} created and sent for approval.`);
+                  showToast(`${trip.travel_id} sent to ${trip.manager} for approval.`);
                   navigate("/travel");
                 }}
                 onCancel={() => navigate("/travel")}
